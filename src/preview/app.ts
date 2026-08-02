@@ -1,12 +1,12 @@
 /**
- * Step 6 preview — the finished app.
+ * Preview build of the app.
  *
- * Byte for byte the same App class the installed PWA runs. Only the two
- * sources differ: elevation comes from the bundled Zermatt region instead of
- * AWS Terrain Tiles, and summits from the baked catalogue instead of Overpass,
- * because a published preview is sandboxed and cannot make external requests.
- * Everything else — streaming, occlusion, pose, AR, storage, the offline
- * panel — is the shipping code path.
+ * The same App class the installed PWA runs. Only the sources differ:
+ * elevation comes from a bundled Zermatt region instead of AWS Terrain Tiles,
+ * and summits from a baked catalogue instead of Overpass, because a published
+ * preview is sandboxed and cannot make external requests. WebGPU, the renderer,
+ * the camera overlay, the drag alignment and the capture button are all the
+ * shipping code path.
  */
 
 import { PEAKS, REGION } from '../data/generated-gornergrat';
@@ -15,6 +15,7 @@ import { App, AppSources } from '../app/app';
 import { BakedTileSource } from '../sources/bakedsource';
 import { TileStore } from '../sources/tilestore';
 import { groundRange } from '../core/geodesy';
+import { webgpuAvailable } from '../render/gpu/renderer';
 import { domReady, el } from '../ui/dom';
 
 async function boot() {
@@ -25,9 +26,22 @@ async function boot() {
     el('strong', {}, 'Peak Finder'), el('div', { class: 'bar2' }, bar), msg);
   document.body.append(splash);
 
+  const fail = (text: string) => {
+    msg.remove();
+    splash.append(el('div', { class: 'err' }, text));
+  };
+
+  if (!webgpuAvailable()) {
+    fail('WebGPU is not available in this browser.\n\nThe renderer is Babylon.js '
+      + 'on WebGPU with no fallback path. Chrome or Edge 121+, or Safari 26+ on '
+      + 'iOS 26+, will run it.\n\nOn iOS, Settings → Apps → Safari → Advanced → '
+      + 'Feature Flags also has a WebGPU switch on some builds.');
+    return;
+  }
+
   try {
     const baked = await loadBakedRegion(REGION, (d, t) => {
-      bar.style.width = `${Math.round((d / t) * 70)}%`;
+      bar.style.width = `${Math.round((d / t) * 60)}%`;
       msg.textContent = `decoding elevation level ${d} of ${t}…`;
     });
 
@@ -39,21 +53,15 @@ async function boot() {
       home: { lon: home.lon, lat: home.lat, name: home.name },
       places: REGION.viewpoints,
       async peaks(lon, lat, radiusKm) {
-        return PEAKS.filter((p) =>
-          groundRange(lon, lat, p.lon, p.lat) <= radiusKm * 1000);
+        return PEAKS.filter((p) => groundRange(lon, lat, p.lon, p.lat) <= radiusKm * 1000);
       },
-      // No download(): this build has no network, and the offline panel says so
-      // rather than offering a button that cannot work.
     };
 
-    msg.textContent = 'streaming terrain…';
-    bar.style.width = '80%';
+    msg.textContent = 'starting WebGPU…';
+    bar.style.width = '75%';
     const app = new App(document.body, sources);
     await app.start();
-    app.viewer.camera.set({ yaw: home.yaw ?? 0, pitch: -1, fov: 40 });
-
-    // The preview gets a place picker the installed app does not need — it has
-    // GPS, this has one valley.
+    app.viewer.camera.set({ yaw: home.yaw ?? 0, pitch: 0 });
     addPlaces(app, sources);
 
     bar.style.width = '100%';
@@ -61,9 +69,11 @@ async function boot() {
     setTimeout(() => splash.remove(), 400);
     (window as unknown as Record<string, unknown>).peak = { app, viewer: app.viewer };
   } catch (e) {
-    msg.remove();
-    splash.append(el('div', { class: 'err' },
-      e instanceof Error ? `${e.message}\n\n${e.stack ?? ''}` : String(e)));
+    // Show the message plainly; the stack only helps if it is not one of the
+    // expected environment failures.
+    const msg = e instanceof Error ? e.message : String(e);
+    const expected = /WebGPU/i.test(msg);
+    fail(expected ? msg : `${msg}\n\n${e instanceof Error ? e.stack ?? '' : ''}`);
   }
 }
 
@@ -74,8 +84,8 @@ function addPlaces(app: App, sources: AppSources) {
     row.append(el('button', {
       class: 'chip', type: 'button',
       onclick: () => {
-        app.viewer.camera.set({ yaw: p.yaw ?? 0, pitch: -1 });
-        // Goes in through the same door a GPS fix would.
+        app.viewer.camera.set({ yaw: p.yaw ?? 0, pitch: 0 });
+        // In through the same door a GPS fix would use.
         app.pose.setPosition(p.lon, p.lat);
       },
     }, p.name));
@@ -83,7 +93,8 @@ function addPlaces(app: App, sources: AppSources) {
   app.addPanel('Places', el('div', {},
     el('h4', {}, 'Demo viewpoints'), row,
     el('p', {}, 'The installed app takes this from GPS. The preview carries one '
-      + 'valley, so it offers places instead.')));
+      + 'valley, so it offers places instead. Point the camera at a real ridge '
+      + 'and the outline will be the wrong mountain — the geometry is Zermatt.')));
 }
 
 void boot();

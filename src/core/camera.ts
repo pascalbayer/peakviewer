@@ -21,6 +21,8 @@ export class Camera {
   aspect = 1;
   near = 0.5;
   far = 4.0e5;
+  /** WebGPU depth convention. Set false only for an OpenGL-style target. */
+  depthZeroToOne = true;
 
   readonly view = new Float32Array(16);
   readonly proj = new Float32Array(16);
@@ -75,9 +77,16 @@ export class Camera {
     pm.fill(0);
     pm[0] = t / this.aspect;
     pm[5] = t;
-    pm[10] = -(this.far + this.near) / (this.far - this.near);
     pm[11] = -1;
-    pm[14] = (-2 * this.far * this.near) / (this.far - this.near);
+    if (this.depthZeroToOne) {
+      // WebGPU clips depth to [0,1], not [-1,1]. Getting this wrong does not
+      // look subtly off — half the scene is clipped away.
+      pm[10] = this.far / (this.near - this.far);
+      pm[14] = (this.far * this.near) / (this.near - this.far);
+    } else {
+      pm[10] = -(this.far + this.near) / (this.far - this.near);
+      pm[14] = (-2 * this.far * this.near) / (this.far - this.near);
+    }
 
     mul4(this.viewProj, pm, v);
   }

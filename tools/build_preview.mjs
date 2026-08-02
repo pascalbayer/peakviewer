@@ -21,12 +21,7 @@ if (!step) {
 }
 
 const TITLES = {
-  step1: 'Peak Finder — Step 1 · Terrain & silhouette',
-  step2: 'Peak Finder — Step 2 · Peak labels',
-  step3: 'Peak Finder — Step 3 · Pose & sensors',
-  step4: 'Peak Finder — Step 4 · AR camera overlay',
-  step5: 'Peak Finder — Step 5 · Tiles & offline',
-  step6: 'Peak Finder — Step 6 · Full app',
+  app: 'Peak Finder — AR preview',
 };
 
 const result = await build({
@@ -41,16 +36,11 @@ const result = await build({
 });
 
 const js = result.outputFiles[0].text.replace(/<\/script/gi, '<\\/script');
-// step6 is the shipping app, so it carries the app's stylesheet, not the
-// preview harness one.
-const cssFile = step === 'step6'
-  ? join(root, 'src', 'app', 'app.css')
-  : join(root, 'src', 'preview', 'preview.css');
-const css = readFileSync(cssFile, 'utf8');
+const css = readFileSync(join(root, 'src', 'app', 'app.css'), 'utf8');
 const title = TITLES[step] ?? `Peak Finder — ${step}`;
 
 const html = `<title>${title}</title>
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <style>
 ${css}</style>
 <script>

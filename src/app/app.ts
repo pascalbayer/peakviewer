@@ -1,13 +1,19 @@
 /**
- * The app itself.
+ * The app.
  *
- * Written against an abstract pair of sources so the installed PWA and the
- * published preview are the same program: one is wired to AWS Terrain Tiles and
- * Overpass, the other to data already inside the bundle.
+ * An AR viewfinder first and a map second: the rear camera fills the frame,
+ * washed towards white, with the computed skyline drawn over it as black
+ * outlines. Alignment is corrected by dragging — left/right shifts the heading,
+ * up/down shifts the pitch — because nothing here registers the drawing against
+ * the photograph, and a few degrees of magnetometer error is normal.
+ *
+ * Written against abstract sources so the installed PWA and the published
+ * preview are the same program.
  */
 
 import { PeakViewer } from './viewer';
 import { CameraFeed } from './camerafeed';
+import { captureFilename, composeCapture, saveImage } from './capture';
 import { PoseTracker } from '../core/pose';
 import { Peak } from '../core/peaks';
 import { fmtRange } from '../core/labels';
@@ -16,14 +22,10 @@ import { ClipmapStreamer, DEFAULT_CLIPMAP } from '../sources/clipmap';
 import { TileKey, TileSource } from '../sources/types';
 import { TileStore } from '../sources/tilestore';
 import { CompassRose } from '../ui/compass';
-import { CAMERA_GROUND, LIGHT_GROUND } from '../ui/labelPainter';
+import { QUALITY_HIGH, QUALITY_LOW, webgpuAvailable } from '../render/gpu/renderer';
 import { el } from '../ui/dom';
 
-export interface DownloadProgress {
-  done: number;
-  total: number;
-  bytes: number;
-}
+export interface DownloadProgress { done: number; total: number; bytes: number }
 
 export interface AppSources {
   label: string;
@@ -33,67 +35,73 @@ export interface AppSources {
   /** Absent when the build cannot reach the network (the preview build). */
   download?(keys: TileKey[], onProgress: (p: DownloadProgress) => void,
     signal: AbortSignal): Promise<DownloadProgress>;
-  /** Fallback position when there is no fix yet. */
   home: { lon: number; lat: number; name: string };
-  /** Extra places the user can jump to; empty in the installed app. */
   places?: { id: string; name: string; lon: number; lat: number; eye: number; yaw?: number }[];
 }
 
 export const PRELOAD_KM = 150;
+const EYE_HEIGHT = 1.6;
 
 export class App {
-  readonly viewer: PeakViewer;
+  viewer!: PeakViewer;
   readonly pose: PoseTracker;
   readonly feed = new CameraFeed();
   readonly streamer: ClipmapStreamer;
-  private rose = new CompassRose();
+  /** Vertical alignment correction, degrees. The horizontal one lives on the pose. */
+  pitchOffset = 0;
 
+  private rose = new CompassRose();
   private stage: HTMLDivElement;
-  private overlayCanvas: HTMLCanvasElement;
+  private canvas: HTMLCanvasElement;
+  private overlay: HTMLCanvasElement;
   private sheet: HTMLDivElement;
+  private tabRow = el('div', { class: 'tabs' });
   private panels: Record<string, HTMLElement> = {};
   private statusBar: HTMLDivElement;
   private card: HTMLDivElement;
-  private ribbonCanvas: HTMLCanvasElement;
+  private ribbon: HTMLCanvasElement;
+  private hint: HTMLDivElement;
+  private shutter: HTMLButtonElement;
 
-  private dirty = true;
-  private ar = false;
   private followSensors = false;
-  private dl: AbortController | null = null;
-  private dlState: DownloadProgress | null = null;
-  private note = '';
   private filled = false;
+  private dl: AbortController | null = null;
+  private note = '';
+  private busy = false;
+  private adjusting = false;
 
   constructor(readonly root: HTMLElement, readonly sources: AppSources) {
-    const canvas = el('canvas', { class: 'view' });
-    this.overlayCanvas = el('canvas', { class: 'labels' });
-    this.ribbonCanvas = el('canvas', { class: 'ribbon' });
+    this.canvas = el('canvas', { class: 'view' });
+    this.overlay = el('canvas', { class: 'labels' });
+    this.ribbon = el('canvas', { class: 'ribbon' });
     this.statusBar = el('div', { class: 'status' });
     this.card = el('div', { class: 'card hidden' });
+    this.hint = el('div', { class: 'hint' }, 'drag to line the outline up');
     this.stage = el('div', { class: 'stage' },
-      this.feed.video, canvas,
-      el('div', { class: 'ovl' }, this.ribbonCanvas, this.statusBar, this.rose.canvas),
+      this.feed.video, this.canvas,
+      el('div', { class: 'ovl' }, this.ribbon, this.overlay, this.statusBar,
+        this.rose.canvas, this.hint),
       this.card);
-
-    this.viewer = new PeakViewer({ canvas, overlay: this.overlayCanvas });
-    this.stage.querySelector('.ovl')!.append(this.overlayCanvas);
 
     this.streamer = new ClipmapStreamer(sources.tiles, DEFAULT_CLIPMAP,
       sources.home.lon, sources.home.lat);
-    this.viewer.setHeightField(this.streamer.heightField);
-    this.streamer.onUpdate = () => {
-      this.viewer.scene.refreshHeights();
-      this.mark();
-    };
 
     this.pose = new PoseTracker({
       onPosition: (lon, lat) => { void this.relocate(lon, lat); },
       onOrientation: (o) => {
-        if (!this.followSensors) return;
-        this.viewer.camera.set(o);
-        this.mark();
+        if (!this.followSensors || !this.viewer) return;
+        this.viewer.camera.set({
+          yaw: o.yaw,
+          pitch: o.pitch + this.pitchOffset,
+          roll: o.roll,
+        });
       },
     });
+
+    this.shutter = el('button', {
+      class: 'shutter', type: 'button', 'aria-label': 'Capture photo',
+      onclick: () => void this.capture(),
+    }, el('span', {}));
 
     this.sheet = el('div', { class: 'sheet' });
     root.append(el('div', { class: 'app' }, this.stage, this.buildBar(), this.sheet));
@@ -101,98 +109,87 @@ export class App {
     this.attachInput();
   }
 
-  private mark = () => { this.dirty = true; };
-
   // ------------------------------------------------------------------ chrome
 
-  /** Registers an extra tab. Used by the preview build for its place picker. */
+  private buildBar(): HTMLElement {
+    const left = el('div', { class: 'actions' },
+      this.icon('◎', 'Use my location', () => void this.locate()),
+      this.icon('⊕', 'Follow device orientation', () => void this.toggleSensors()),
+    );
+    const right = el('div', { class: 'actions' },
+      this.icon('↺', 'Reset alignment', () => {
+        this.pose.setOffset(0);
+        this.pitchOffset = 0;
+        this.note = 'alignment reset';
+      }),
+      this.icon('≡', 'Panels', () => {
+        const open = this.sheet.classList.toggle('open');
+        if (!open) this.tabRow.querySelectorAll('button').forEach((b) => b.classList.remove('on'));
+        else this.openTab('Peaks');
+      }),
+    );
+    return el('div', { class: 'bar' }, left, this.shutter, right);
+  }
+
+  private icon(glyph: string, label: string, onClick: () => void): HTMLElement {
+    return el('button', {
+      type: 'button', class: 'icon', 'aria-label': label, title: label, onclick: onClick,
+    }, glyph);
+  }
+
+  private openTab(name: string) {
+    this.tabRow.querySelectorAll('button').forEach((b) => {
+      b.classList.toggle('on', b.textContent === name);
+    });
+    Object.entries(this.panels).forEach(([k, p]) => p.classList.toggle('hidden', k !== name));
+    this.sheet.classList.add('open');
+    if (name === 'Offline') void this.refreshOffline();
+    if (name === 'Peaks') this.refreshPeakList();
+    if (name === 'Check') this.refreshDiagnostics();
+  }
+
   addPanel(name: string, node: HTMLElement) {
     node.classList.add('panel', 'hidden');
     this.panels[name] = node;
     this.sheet.append(node);
-    this.tabRow.append(this.makeTab(name));
-  }
-
-  private tabRow = el('div', { class: 'tabs' });
-
-  private makeTab(name: string): HTMLButtonElement {
-    const b = el('button', {
-      type: 'button',
-      onclick: () => {
-        const open = b.classList.contains('on') && this.sheet.classList.contains('open');
-        this.tabRow.querySelectorAll('button').forEach((x) => x.classList.remove('on'));
-        Object.values(this.panels).forEach((p) => p.classList.add('hidden'));
-        if (open) { this.sheet.classList.remove('open'); return; }
-        b.classList.add('on');
-        this.panels[name].classList.remove('hidden');
-        this.sheet.classList.add('open');
-        if (name === 'Offline') void this.refreshOffline();
-        if (name === 'Peaks') this.refreshPeakList();
-      },
-    }, name);
-    return b;
-  }
-
-  private buildBar(): HTMLElement {
-    const tabs = ['Peaks', 'Offline', 'About'];
-    const bar = el('div', { class: 'bar' });
-    const actions = el('div', { class: 'actions' },
-      this.iconButton('◎', 'Locate me', () => void this.locate()),
-      this.iconButton('◐', 'Toggle shading', () => {
-        this.viewer.style = this.viewer.style === 'outline' ? 'shaded' : 'outline';
-        this.mark();
-      }),
-      this.iconButton('▣', 'Camera overlay', () => void this.toggleAr()),
-      this.iconButton('⊕', 'Follow device', () => void this.toggleSensors()),
-    );
-    tabs.forEach((t, i) => {
-      const b = this.makeTab(t);
-      if (i === 0) b.classList.add('on');
-      this.tabRow.append(b);
-    });
-    bar.append(actions, this.tabRow);
-    return bar;
-  }
-
-  private iconButton(glyph: string, label: string, onClick: () => void): HTMLElement {
-    const b = el('button', {
-      type: 'button', class: 'icon', 'aria-label': label, title: label, onclick: onClick,
-    }, glyph);
-    return b;
+    this.tabRow.append(el('button', {
+      type: 'button', onclick: () => this.openTab(name),
+    }, name));
   }
 
   private buildPanels() {
-    const peaks = el('div', { class: 'panel' });
-    const offline = el('div', { class: 'panel hidden' });
-    const about = el('div', { class: 'panel hidden' });
-    this.panels = { Peaks: peaks, Offline: offline, About: about };
-    this.sheet.append(peaks, offline, about);
+    this.sheet.append(this.tabRow);
+    for (const n of ['Peaks', 'Camera', 'Offline', 'Check', 'About']) {
+      this.addPanel(n, el('div', {}));
+    }
 
-    about.append(
+    this.panels.About.append(
       el('h4', {}, 'What you are looking at'),
-      el('p', {}, 'The skyline is computed, not photographed: a 30 m elevation '
-        + 'model is rasterised in a geocentric frame with atmospheric refraction, '
-        + 'and the outline you see is an edge detector run over the result. '
-        + 'Summits are depth-tested against that same raster, so a peak behind a '
-        + 'ridge stays hidden.'),
-      el('h4', {}, 'Alignment'),
-      el('p', {}, 'Heading comes from the magnetometer and gyroscope with magnetic '
-        + 'declination applied. Nothing here looks at the camera image, so the '
-        + 'overlay can sit a few degrees off; drag the view to correct it and the '
-        + 'dot orbiting the compass shows how much correction is in play.'),
+      el('p', {}, 'The black outline is computed, not photographed: a 30 m '
+        + 'elevation model is rasterised on the GPU in a geocentric frame with '
+        + 'atmospheric refraction, and an edge detector runs over the result. '
+        + 'The camera image behind it is washed towards white so the lines read.'),
+      el('h4', {}, 'Lining it up'),
+      el('p', {}, 'Drag left or right to shift the heading, up or down to shift '
+        + 'the pitch, until the outline sits on the real ridge. Nothing here '
+        + 'matches the drawing to the photograph — alignment is the '
+        + 'magnetometer plus whatever you dial in — so a few degrees out is '
+        + 'expected, not a fault. Pinch if the middle lines up but the edges '
+        + 'do not: that is the lens field of view, not the heading.'),
       el('h4', {}, 'Data'),
-      el('p', {}, `Elevation: ${this.sources.tiles.name}. Summits: `
-        + 'OpenStreetMap contributors. Altitude is sampled from the elevation '
-        + 'model rather than taken from the GPS vertical fix, which is routinely '
-        + 'tens of metres out.'),
+      el('p', {}, `Elevation: ${this.sources.tiles.name}. Summits: OpenStreetMap `
+        + 'contributors. Position and altitude come from GPS; the elevation '
+        + "model's own ground height is shown next to it, because a phone's "
+        + 'vertical fix is the weaker half of a satellite fix.'),
     );
   }
+
+  // ------------------------------------------------------------------ input
 
   private attachInput() {
     const pts = new Map<number, { x: number; y: number }>();
     let pinch = 0, fov0 = 0, moved = 0;
-    const cam = this.viewer.camera;
-    const degPerPx = () => cam.fov / (this.stage.clientHeight || 1);
+    const degPerPx = () => (this.viewer?.camera.fov ?? 45) / (this.stage.clientHeight || 1);
 
     this.stage.addEventListener('pointerdown', (e) => {
       this.stage.setPointerCapture(e.pointerId);
@@ -200,77 +197,116 @@ export class App {
       if (pts.size === 2) {
         const [a, b] = [...pts.values()];
         pinch = Math.hypot(a.x - b.x, a.y - b.y);
-        fov0 = cam.fov;
+        fov0 = this.viewer?.camera.fov ?? 45;
       }
       moved = 0;
     });
+
     this.stage.addEventListener('pointermove', (e) => {
       const prev = pts.get(e.pointerId);
-      if (!prev) return;
+      if (!prev || !this.viewer) return;
       const dx = e.clientX - prev.x, dy = e.clientY - prev.y;
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
       moved += Math.abs(dx) + Math.abs(dy);
+      const cam = this.viewer.camera;
+
       if (pts.size === 2) {
         const [a, b] = [...pts.values()];
         const d = Math.hypot(a.x - b.x, a.y - b.y);
-        if (pinch > 4) cam.fov = Math.max(4, Math.min(100, fov0 * (pinch / d)));
-      } else {
-        const dyaw = -dx * degPerPx();
-        // While following the device, a drag corrects the alignment rather than
-        // fighting the compass — the panorama stays locked to north.
-        if (this.followSensors) this.pose.nudgeOffset(dyaw);
-        cam.yaw = (cam.yaw + dyaw + 360) % 360;
-        if (!this.followSensors) cam.pitch = Math.max(-80, Math.min(80, cam.pitch + dy * degPerPx()));
+        if (pinch > 4) cam.fov = clamp(fov0 * (pinch / d), 8, 100);
+        return;
       }
-      this.mark();
+
+      // One finger always means "line the outline up": horizontal shifts the
+      // heading, vertical shifts the pitch. Both feed the offsets, so with the
+      // sensors driving the view the correction sticks as you turn around.
+      const dYaw = -dx * degPerPx();
+      const dPitch = dy * degPerPx();
+      this.pose.nudgeOffset(dYaw);
+      this.pitchOffset = clamp(this.pitchOffset + dPitch, -45, 45);
+      cam.yaw = (cam.yaw + dYaw + 360) % 360;
+      cam.pitch = clamp(cam.pitch + dPitch, -85, 85);
+      if (moved > 10) { this.adjusting = true; this.hint.classList.add('show'); }
     });
+
     const up = (e: PointerEvent) => {
-      if (pts.has(e.pointerId) && moved < 8) {
+      if (pts.has(e.pointerId) && moved < 8 && this.viewer) {
         const r = this.stage.getBoundingClientRect();
         this.select(this.viewer.pick(e.clientX - r.left, e.clientY - r.top)?.target.peak ?? null);
       }
       pts.delete(e.pointerId);
+      if (!pts.size) {
+        this.adjusting = false;
+        setTimeout(() => { if (!this.adjusting) this.hint.classList.remove('show'); }, 900);
+      }
     };
     this.stage.addEventListener('pointerup', up);
     this.stage.addEventListener('pointercancel', up);
     this.stage.addEventListener('wheel', (e) => {
       e.preventDefault();
-      cam.fov = Math.max(4, Math.min(100, cam.fov * Math.exp(e.deltaY * 0.0012)));
-      this.mark();
+      if (!this.viewer) return;
+      const cam = this.viewer.camera;
+      cam.fov = clamp(cam.fov * Math.exp(e.deltaY * 0.0012), 8, 100);
     }, { passive: false });
-    new ResizeObserver(this.mark).observe(this.stage);
   }
 
   // ------------------------------------------------------------------ state
 
   async start() {
+    if (!webgpuAvailable()) {
+      throw new Error('WebGPU is not available in this browser.\n\nThis app renders '
+        + 'the terrain with Babylon.js on WebGPU and has no fallback path.\n\n'
+        + 'Chrome or Edge 121+, or Safari 26+ on iOS 26+, will run it.');
+    }
+    const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    this.viewer = await PeakViewer.create(
+      { canvas: this.canvas, overlay: this.overlay },
+      mobile ? QUALITY_LOW : QUALITY_HIGH,
+    );
+    this.viewer.setHeightField(this.streamer.heightField);
+    this.streamer.onUpdate = () => {
+      this.viewer.refreshHeights();
+      this.viewer.rebuildTargets();
+    };
+
     await this.relocate(this.sources.home.lon, this.sources.home.lat);
-    this.viewer.camera.set({ yaw: 0, pitch: -1, fov: 40 });
+    this.viewer.camera.set({ yaw: 0, pitch: 0, fov: 46 });
+    void this.enableCamera();
     this.loop();
   }
 
   private async relocate(lon: number, lat: number) {
     const hf = this.streamer.heightField;
     const moved = groundRange(hf.lon, hf.lat, lon, lat);
-    // The first call has nowhere to move to — the streamer was constructed at
-    // this position — but the windows are still empty and must be filled.
     if (!this.filled || moved > 30) {
       await this.streamer.setCenter(lon, lat);
       this.filled = true;
     }
-    this.viewer.moveTo(lon, lat, this.viewer.scene.observer.eye);
+    this.viewer?.refreshHeights();
+    this.applyAltitude(lon, lat);
     this.pose.lon = lon;
     this.pose.lat = lat;
-    this.viewer.scene.refreshHeights();
-    this.mark();
     void this.loadPeaks(lon, lat);
+  }
+
+  /**
+   * GPS supplies altitude when it has one. It is the weaker half of a fix — the
+   * value is height above the WGS84 ellipsoid, and its accuracy is usually
+   * several times the horizontal figure — so the elevation model's own ground
+   * height is kept alongside it and used whenever the device reports nothing,
+   * which is common indoors and on hardware without a barometer.
+   */
+  private applyAltitude(lon: number, lat: number) {
+    if (!this.viewer) return;
+    const dem = this.streamer.heightField.groundAt(lon, lat);
+    const gps = this.pose.status.gpsAltitude;
+    const useGps = gps !== null && Number.isFinite(gps);
+    this.viewer.moveTo(lon, lat, (useGps ? gps! : dem) + EYE_HEIGHT, useGps ? 'gps' : 'dem');
   }
 
   private async loadPeaks(lon: number, lat: number) {
     try {
-      const peaks = await this.sources.peaks(lon, lat, 260);
-      this.viewer.setPeaks(peaks);
-      this.mark();
+      this.viewer?.setPeaks(await this.sources.peaks(lon, lat, 260));
       this.refreshPeakList();
     } catch (e) {
       this.note = e instanceof Error ? e.message : 'summit lookup failed';
@@ -278,12 +314,13 @@ export class App {
   }
 
   private async locate() {
-    if (!navigator.geolocation) { this.note = 'No geolocation in this browser.'; return; }
+    if (!navigator.geolocation) { this.note = 'no geolocation here'; return; }
     this.note = 'locating…';
     navigator.geolocation.getCurrentPosition(
       (p) => {
         this.note = '';
-        void this.relocate(p.coords.longitude, p.coords.latitude);
+        this.pose.setPosition(p.coords.longitude, p.coords.latitude,
+          p.coords.accuracy, p.coords.altitude, p.coords.altitudeAccuracy);
       },
       (e) => { this.note = `location: ${e.message}`; },
       { enableHighAccuracy: true, timeout: 20000 },
@@ -294,44 +331,62 @@ export class App {
     this.followSensors = !this.followSensors;
     if (this.followSensors) {
       const ok = await this.pose.requestPermission();
-      if (!ok) { this.followSensors = false; this.note = 'Motion access refused.'; return; }
+      if (!ok) { this.followSensors = false; this.note = 'motion access refused'; return; }
       this.pose.start();
     } else {
       this.pose.stop();
-      this.viewer.camera.set({ roll: 0 });
+      this.viewer?.camera.set({ roll: 0 });
     }
-    this.mark();
   }
 
-  private async toggleAr() {
-    this.ar = !this.ar;
-    if (this.ar) {
-      const ok = await this.feed.start();
-      if (!ok) this.note = this.feed.status.error ?? 'camera unavailable';
-      this.viewer.camera.fov = this.feed.renderFovY(this.stage.clientWidth, this.stage.clientHeight);
-    } else {
-      this.feed.stop();
+  async enableCamera(): Promise<boolean> {
+    if (this.feed.status.active) return true;
+    const ok = await this.feed.start();
+    if (!ok) { this.note = this.feed.status.error ?? 'camera unavailable'; return false; }
+    this.viewer?.renderer.attachVideo(this.feed.video);
+    if (this.viewer) {
+      this.viewer.camera.fov = this.feed.renderFovY(
+        this.stage.clientWidth, this.stage.clientHeight);
     }
-    this.viewer.style = this.ar ? 'ar' : 'outline';
-    this.viewer.painter.style = this.ar ? CAMERA_GROUND : LIGHT_GROUND;
-    this.viewer.scene.compose.lineColor = this.ar ? [1.0, 0.78, 0.28] : [0.11, 0.14, 0.20];
-    this.viewer.scene.compose.edgeWidth = this.ar ? 1.5 : 1;
-    this.stage.classList.toggle('ar', this.ar);
-    this.mark();
+    return true;
+  }
+
+  private async capture() {
+    if (!this.viewer || this.busy) return;
+    this.busy = true;
+    this.shutter.classList.add('firing');
+    try {
+      const shot = await this.viewer.renderer.capture();
+      if (!shot) { this.note = 'capture failed'; return; }
+      const hf = this.streamer.heightField;
+      const named = this.viewer.placed.slice(0, 3).map((p) => p.target.peak.name).join(' · ');
+      const stamp = `${named || 'Peak Finder'} — ${hf.lat.toFixed(4)}, ${hf.lon.toFixed(4)}`
+        + ` · ${this.viewer.eyeAltitude.toFixed(0)} m · ${this.viewer.camera.yaw.toFixed(0)}°`;
+      const blob = await composeCapture(shot, this.overlay, stamp);
+      if (!blob) { this.note = 'capture failed'; return; }
+      const outcome = await saveImage(blob,
+        captureFilename(hf.lon, hf.lat, this.viewer.camera.yaw));
+      this.note = outcome === 'shared' ? 'saved'
+        : outcome === 'downloaded' ? 'downloaded'
+          : outcome === 'cancelled' ? '' : 'could not save';
+      setTimeout(() => { if (this.note === 'saved' || this.note === 'downloaded') this.note = ''; }, 2500);
+    } catch (e) {
+      this.note = e instanceof Error ? e.message : 'capture failed';
+    } finally {
+      this.busy = false;
+      setTimeout(() => this.shutter.classList.remove('firing'), 220);
+    }
   }
 
   private select(peak: Peak | null) {
-    if (!peak) { this.card.classList.add('hidden'); this.mark(); return; }
+    if (!peak || !this.viewer) { this.card.classList.add('hidden'); return; }
     const t = this.viewer.targets.find((x) => x.peak.id === peak.id);
-    const rows: [string, string][] = [];
-    if (t) {
-      rows.push(['Distance', fmtRange(t.range)], ['Bearing', `${t.bearing.toFixed(1)}°`],
-        ['Elevation angle', `${t.elevation.toFixed(2)}°`]);
-    } else {
-      const obs = this.viewer.scene.observer;
-      rows.push(['Distance', fmtRange(groundRange(obs.lon, obs.lat, peak.lon, peak.lat))],
-        ['Bearing', `${bearing(obs.lon, obs.lat, peak.lon, peak.lat).toFixed(1)}°`]);
-    }
+    const hf = this.streamer.heightField;
+    const rows: [string, string][] = t
+      ? [['Distance', fmtRange(t.range)], ['Bearing', `${t.bearing.toFixed(1)}°`],
+        ['Elevation angle', `${t.elevation.toFixed(2)}°`]]
+      : [['Distance', fmtRange(groundRange(hf.lon, hf.lat, peak.lon, peak.lat))],
+        ['Bearing', `${bearing(hf.lon, hf.lat, peak.lon, peak.lat).toFixed(1)}°`]];
     if (peak.ele !== undefined) rows.push(['Elevation', `${Math.round(peak.ele)} m`]);
     if (peak.demEle !== undefined) rows.push(['DEM at summit', `${Math.round(peak.demEle)} m`]);
     if (peak.prom !== undefined) rows.push(['Prominence', `${peak.prom} m`]);
@@ -346,39 +401,21 @@ export class App {
       el('h3', {}, peak.name),
       el('div', { class: 'card-rows' },
         ...rows.flatMap(([k, v]) => [el('span', {}, k), el('b', {}, v)])),
-      el('button', {
-        class: 'chip', type: 'button',
-        onclick: () => {
-          const t2 = this.viewer.targets.find((x) => x.peak.id === peak.id);
-          if (t2) {
-            this.followSensors = false;
-            this.pose.stop();
-            this.viewer.camera.set({ yaw: t2.bearing, pitch: t2.elevation, fov: 22 });
-            this.mark();
-          }
-        },
-      }, 'Aim at this summit'),
     );
     this.card.classList.remove('hidden');
-    this.mark();
   }
 
   // ----------------------------------------------------------------- panels
 
   private refreshPeakList() {
     const panel = this.panels.Peaks;
-    if (!panel) return;
-    // Everything within range, best first — not only what the camera happens to
-    // be pointing at. The occlusion probe can only answer for the current
-    // frustum, so "on screen now" is a marker on the row, not a filter.
+    if (!panel || !this.viewer) return;
     const near = this.viewer.targets.slice(0, 80);
-    const onScreen = this.viewer.placed.length;
     panel.textContent = '';
-    panel.append(el('h4', {}, `${this.viewer.targets.length} summits in range`
-      + (onScreen ? ` · ${onScreen} labelled ahead` : '')));
+    panel.append(el('h4', {}, `${this.viewer.targets.length} in range · `
+      + `${this.viewer.visibleCount} not hidden by terrain`));
     if (!near.length) {
-      panel.append(el('p', {}, 'No summits in range yet — the catalogue may '
-        + 'still be loading.'));
+      panel.append(el('p', {}, 'No summits in range yet.'));
       return;
     }
     const list = el('div', { class: 'peaklist' });
@@ -394,6 +431,98 @@ export class App {
     panel.append(list);
   }
 
+  private refreshCameraPanel() {
+    const panel = this.panels.Camera;
+    if (!panel || !this.viewer) return;
+    const r = this.viewer.renderer;
+    panel.textContent = '';
+    panel.append(el('h4', {}, 'Camera and overlay'));
+
+    const slider = (label: string, min: number, max: number, step: number,
+      value: number, onInput: (v: number) => void, fmt: (v: number) => string) => {
+      const out = el('b', {}, fmt(value));
+      const input = el('input', { type: 'range', min, max, step, value });
+      input.addEventListener('input', () => {
+        const v = parseFloat(input.value);
+        out.textContent = fmt(v);
+        onInput(v);
+      });
+      panel.append(el('div', { class: 'row slider' }, el('span', {}, label), out, input));
+    };
+
+    panel.append(el('div', { class: 'chips' },
+      el('button', {
+        class: `chip${this.feed.status.active ? ' on' : ''}`, type: 'button',
+        onclick: async () => {
+          if (this.feed.status.active) {
+            this.feed.stop();
+            this.viewer.renderer.attachVideo(null);
+          } else {
+            await this.enableCamera();
+          }
+          this.refreshCameraPanel();
+        },
+      }, this.feed.status.active ? 'Camera on' : 'Turn camera on')));
+
+    slider('Whiten', 0, 0.95, 0.01, r.whiten, (v) => { r.whiten = v; }, (v) => v.toFixed(2));
+    slider('Desaturate', 0, 1, 0.01, r.desaturate, (v) => { r.desaturate = v; }, (v) => v.toFixed(2));
+    slider('Line weight', 0.5, 3, 0.25, r.edgeWidth, (v) => { r.edgeWidth = v; }, (v) => `${v} px`);
+    slider('Detail', 0.005, 0.12, 0.005, r.edgeLow,
+      (v) => { r.edgeLow = v; r.edgeHigh = v * 10; }, (v) => v.toFixed(3));
+    slider('Lens FOV', 25, 90, 0.5, this.feed.status.fovY, (v) => {
+      this.feed.setFov(v);
+      this.viewer.camera.fov = this.feed.renderFovY(
+        this.stage.clientWidth, this.stage.clientHeight);
+    }, (v) => `${v.toFixed(1)}°`);
+    panel.append(el('p', {}, 'A wrong lens field of view does not slide the '
+      + 'overlay, it scales it about the centre. If the middle sits right and '
+      + 'the edges drift, this is the control to reach for.'));
+  }
+
+  private refreshDiagnostics() {
+    const panel = this.panels.Check;
+    if (!panel) return;
+    const d = this.viewer?.renderer.diagnostics;
+    const s = this.pose.status;
+    const f = this.feed.status;
+    const rows: [string, string][] = [
+      ['WebGPU', webgpuAvailable() ? 'present' : 'missing'],
+      ['Engine', d?.engine ?? '—'],
+      ['Adapter', d?.adapter ?? '—'],
+      ['Clipmap levels', String(d?.levels ?? 0)],
+      ['Height atlas', d?.atlas ?? '—'],
+      ['Mesh vertices', (d?.vertices ?? 0).toLocaleString()],
+      ['Sectors drawn', String(d?.sectorsDrawn ?? 0)],
+      ['Render size', d?.size ?? '—'],
+      ['Frame', `${(d?.frameMs ?? 0).toFixed(1)} ms`],
+      ['Visibility pass', `${(this.viewer?.lastVisibilityMs ?? 0).toFixed(1)} ms`],
+      ['Camera', f.active ? `${f.width}×${f.height}` : (f.error ?? 'off')],
+      ['Lens FOV', `${f.fovY.toFixed(1)}° (${f.fovSource})`],
+      ['GPS accuracy', s.gpsAccuracy === null ? 'no fix' : `±${s.gpsAccuracy.toFixed(0)} m`],
+      ['GPS altitude', s.gpsAltitude === null ? 'not reported'
+        : `${s.gpsAltitude.toFixed(0)} m ±${(s.gpsAltitudeAccuracy ?? 0).toFixed(0)}`],
+      ['DEM ground', `${(this.viewer?.groundBelow ?? 0).toFixed(0)} m`],
+      ['Eye altitude', `${(this.viewer?.eyeAltitude ?? 0).toFixed(0)} m `
+        + `(${this.viewer?.altitudeSource ?? '—'})`],
+      ['Declination', `${s.declination.toFixed(2)}°`],
+      ['Heading offset', `${signed(s.offset)}°`],
+      ['Pitch offset', `${this.pitchOffset.toFixed(2)}°`],
+    ];
+    panel.textContent = '';
+    panel.append(
+      el('h4', {}, 'Diagnostics'),
+      el('div', { class: 'card-rows' },
+        ...rows.flatMap(([k, v]) => [el('span', {}, k), el('b', {}, v)])),
+    );
+    if (d?.shaderErrors.length) {
+      panel.append(el('h4', {}, 'Device messages'),
+        el('pre', { class: 'errbox' }, d.shaderErrors.join('\n')));
+    }
+    panel.append(el('div', { class: 'chips' }, el('button', {
+      class: 'chip', type: 'button', onclick: () => this.refreshDiagnostics(),
+    }, 'Refresh')));
+  }
+
   private async refreshOffline() {
     const panel = this.panels.Offline;
     if (!panel) return;
@@ -404,50 +533,40 @@ export class App {
 
     panel.textContent = '';
     panel.append(
-      el('h4', {}, `Offline coverage`),
+      el('h4', {}, 'Offline coverage'),
       el('p', {}, `A ${PRELOAD_KM} km radius around here is ${keys.length} tiles, `
-        + `roughly ${fmtBytes(keys.length * 100 * 1024)}. Tiles already fetched `
-        + 'while you look around are kept, so this usually downloads far less.'),
+        + `roughly ${fmtBytes(keys.length * 100 * 1024)}. Tiles fetched while you `
+        + 'look around are kept, so this usually downloads far less.'),
       el('div', { class: 'card-rows' },
         el('span', {}, 'Stored tiles'), el('b', {}, String(st.tiles)),
         el('span', {}, 'Stored bytes'), el('b', {}, fmtBytes(st.bytes)),
         el('span', {}, 'Browser usage'), el('b', {}, q ? fmtBytes(q.usage) : '—'),
-        el('span', {}, 'Browser quota'), el('b', {}, q ? fmtBytes(q.quota) : '—'),
-        el('span', {}, 'Regions saved'), el('b', {}, String(st.regions.length))),
+        el('span', {}, 'Browser quota'), el('b', {}, q ? fmtBytes(q.quota) : '—')),
     );
 
     const row = el('div', { class: 'chips' });
     if (this.sources.download) {
-      if (this.dl) {
-        row.append(el('button', {
-          class: 'chip', type: 'button',
-          onclick: () => { this.dl?.abort(); this.dl = null; void this.refreshOffline(); },
-        }, `Stop (${this.dlState?.done ?? 0}/${this.dlState?.total ?? 0})`));
-      } else {
-        row.append(el('button', {
-          class: 'chip on', type: 'button',
-          onclick: async () => {
-            this.dl = new AbortController();
+      row.append(el('button', {
+        class: 'chip on', type: 'button',
+        onclick: async () => {
+          this.dl = new AbortController();
+          try {
+            const res = await this.sources.download!(keys, (p) => {
+              this.note = `downloading ${p.done}/${p.total}`;
+            }, this.dl.signal);
+            await this.sources.store.putRegion({
+              id: `${hf.lon.toFixed(3)},${hf.lat.toFixed(3)}`,
+              name: `${PRELOAD_KM} km around ${hf.lat.toFixed(3)}, ${hf.lon.toFixed(3)}`,
+              lon: hf.lon, lat: hf.lat, radiusKm: PRELOAD_KM,
+              tiles: keys.length, bytes: res.bytes, added: Date.now(),
+            });
+          } finally {
+            this.dl = null;
+            this.note = '';
             void this.refreshOffline();
-            try {
-              this.dlState = await this.sources.download!(keys, (p) => {
-                this.dlState = p;
-                this.note = `downloading ${p.done}/${p.total}`;
-              }, this.dl.signal);
-              await this.sources.store.putRegion({
-                id: `${hf.lon.toFixed(3)},${hf.lat.toFixed(3)}`,
-                name: `${PRELOAD_KM} km around ${hf.lat.toFixed(3)}, ${hf.lon.toFixed(3)}`,
-                lon: hf.lon, lat: hf.lat, radiusKm: PRELOAD_KM,
-                tiles: keys.length, bytes: this.dlState.bytes, added: Date.now(),
-              });
-            } finally {
-              this.dl = null;
-              this.note = '';
-              void this.refreshOffline();
-            }
-          },
-        }, `Download ${PRELOAD_KM} km`));
-      }
+          }
+        },
+      }, `Download ${PRELOAD_KM} km`));
     } else {
       panel.append(el('p', { class: 'muted' }, 'This build has no network source, '
         + 'so downloading is disabled. The storage figures above are real.'));
@@ -457,85 +576,83 @@ export class App {
       onclick: async () => { await this.sources.store.clearTiles(); void this.refreshOffline(); },
     }, 'Clear storage'));
     panel.append(row);
-
-    for (const r of st.regions) {
-      panel.append(el('div', { class: 'region' },
-        el('b', {}, r.name),
-        el('span', {}, `${r.tiles} tiles · ${fmtBytes(r.bytes)}`),
-        el('button', {
-          type: 'button', class: 'chip',
-          onclick: async () => {
-            await this.sources.store.deleteRegion(r.id);
-            void this.refreshOffline();
-          },
-        }, 'Forget')));
-    }
   }
 
   // ------------------------------------------------------------------- loop
 
   private loop = () => {
+    if (!this.viewer) return;
     const cam = this.viewer.camera;
-    const w = this.stage.clientWidth || 1, h = this.stage.clientHeight || 1;
-    cam.aspect = w / h;
-    if (this.ar && this.feed.status.active) {
-      const want = this.feed.renderFovY(w, h);
-      if (Math.abs(want - cam.fov) > 0.02) { cam.fov = want; this.dirty = true; }
-    }
-    cam.update();
-    if (this.dirty) { this.viewer.render(); this.dirty = false; }
+    this.viewer.render();
     this.drawRibbon(cam.yaw, cam.hfov);
     const off = this.pose.status.offset;
     this.rose.draw(cam.yaw, off, { warn: Math.abs(((off + 180) % 360) - 180) > 8 });
     this.drawStatus();
+    if (this.panels.Camera && !this.panels.Camera.classList.contains('hidden')
+      && !this.panels.Camera.childElementCount) this.refreshCameraPanel();
     requestAnimationFrame(this.loop);
   };
 
   private drawStatus() {
-    const obs = this.viewer.scene.observer;
+    const v = this.viewer;
     const p = this.streamer.progress;
-    const bits = [
-      `${obs.ground.toFixed(0)} m`,
-      `${this.viewer.placed.length} labels`,
-    ];
+    const bits = [`${v.eyeAltitude.toFixed(0)} m ${v.altitudeSource}`];
     if (p.total && p.done < p.total) bits.unshift(`terrain ${p.done}/${p.total}`);
     if (this.followSensors) bits.push('sensors');
+    const off = this.pose.status.offset;
+    if (Math.abs(((off + 180) % 360) - 180) > 0.4 || Math.abs(this.pitchOffset) > 0.4) {
+      bits.push(`align ${signed(off)}° / ${this.pitchOffset.toFixed(1)}°`);
+    }
     if (this.note) bits.push(this.note);
     const text = bits.join('  ·  ');
     if (this.statusBar.textContent !== text) this.statusBar.textContent = text;
   }
 
   private drawRibbon(yaw: number, hfov: number) {
-    const cv = this.ribbonCanvas;
+    const cv = this.ribbon;
     const dpr = Math.min(devicePixelRatio || 1, 2);
     const w = cv.clientWidth, h = cv.clientHeight;
     if (!w || !h) return;
-    if (cv.width !== Math.round(w * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+    if (cv.width !== Math.round(w * dpr)) {
+      cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    }
     const c = cv.getContext('2d')!;
     c.setTransform(dpr, 0, 0, dpr, 0, 0);
     c.clearRect(0, 0, w, h);
     const pxPerDeg = w / hfov;
-    const names: Record<number, string> = { 0: 'N', 45: 'NE', 90: 'E', 135: 'SE', 180: 'S', 225: 'SW', 270: 'W', 315: 'NW' };
+    const names: Record<number, string> = {
+      0: 'N', 45: 'NE', 90: 'E', 135: 'SE', 180: 'S', 225: 'SW', 270: 'W', 315: 'NW',
+    };
     for (let b = Math.floor((yaw - hfov / 2) / 5) * 5; b <= yaw + hfov / 2 + 5; b += 5) {
       const d = ((b - yaw + 540) % 360) - 180;
       const x = w / 2 + d * pxPerDeg;
       if (x < -30 || x > w + 30) continue;
       const bb = ((b % 360) + 360) % 360;
       const major = bb % 45 === 0;
-      c.strokeStyle = major ? 'rgba(255,255,255,.9)' : 'rgba(255,255,255,.4)';
+      // Dark marks: what is behind them is a whitened photograph.
+      c.strokeStyle = major ? 'rgba(12,16,22,.85)' : 'rgba(12,16,22,.4)';
       c.lineWidth = major ? 1.5 : 1;
       c.beginPath(); c.moveTo(x, h - (major ? 12 : 6)); c.lineTo(x, h - 1); c.stroke();
       if (major) {
-        c.fillStyle = bb === 0 ? '#ff8a6a' : 'rgba(255,255,255,.95)';
+        c.fillStyle = bb === 0 ? '#b23c1e' : 'rgba(12,16,22,.9)';
         c.font = '600 11px ui-sans-serif, system-ui, sans-serif';
         c.textAlign = 'center';
         c.fillText(names[bb] ?? String(bb), x, h - 16);
       }
     }
-    c.fillStyle = '#ffd166';
+    c.fillStyle = '#b23c1e';
     c.beginPath(); c.moveTo(w / 2, h - 1); c.lineTo(w / 2 - 5, h - 9); c.lineTo(w / 2 + 5, h - 9);
     c.closePath(); c.fill();
   }
+}
+
+function clamp(v: number, lo: number, hi: number): number {
+  return v < lo ? lo : v > hi ? hi : v;
+}
+
+function signed(deg: number): string {
+  const d = deg > 180 ? deg - 360 : deg;
+  return d.toFixed(1);
 }
 
 export function fmtBytes(n: number): string {

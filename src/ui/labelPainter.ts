@@ -19,27 +19,25 @@ export interface LabelStyle {
   accentInk: string;
 }
 
-export const LIGHT_GROUND: LabelStyle = {
+/**
+ * The app draws over a camera image washed towards white, so labels are black
+ * ink with a white halo — the same palette as the outlines, and legible over
+ * both bright snow and dark rock once the wash is applied.
+ */
+export const ON_WHITE: LabelStyle = {
   nameSize: 13,
   detailSize: 11,
-  ink: '#101821',
-  halo: 'rgba(255,255,255,.92)',
-  leader: 'rgba(16,24,33,.55)',
+  ink: '#0a0d11',
+  halo: 'rgba(255,255,255,.93)',
+  leader: 'rgba(10,13,17,.62)',
   accent: '#c2410c',
   accentInk: '#ffffff',
-};
-
-export const CAMERA_GROUND: LabelStyle = {
-  ...LIGHT_GROUND,
-  ink: '#ffffff',
-  halo: 'rgba(6,10,16,.78)',
-  leader: 'rgba(255,255,255,.7)',
 };
 
 export class LabelPainter {
   readonly canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
-  style: LabelStyle = LIGHT_GROUND;
+  style: LabelStyle = ON_WHITE;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;

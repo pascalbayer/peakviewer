@@ -1,14 +1,15 @@
 # peakviewer
 
-A mobile PWA peak finder: an on-device elevation model, a GPU-rendered horizon,
-and sensor-based labelling of the summits you can actually see.
+An AR peak finder: the rear camera fills the frame, washed towards white, with
+the skyline computed from an on-device elevation model drawn over it as black
+outlines. Drag to line the outline up with the real ridge; the shutter saves the
+composite to your photos.
 
-The architecture follows the same split the commercial apps use — a 2.5D
-heightfield rasterised in real time, plus an independently versioned catalogue
-of named summits — rather than shipping a 3D model of the Alps.
+Rendered with **Babylon.js on WebGPU**, core modules only. There is no WebGL
+fallback — Chrome or Edge 121+, or Safari 26+ on iOS 26+.
 
     npm install
-    npm run build     # -> dist/app/  (the installable PWA, ~100 KB)
+    npm run build     # runs the checks, then -> dist/app/ (the PWA, ~1.4 MB)
     npm run serve     # http://localhost:8080
 
 Geolocation, motion sensors and the camera all require a secure context, so use
@@ -26,17 +27,20 @@ IndexedDB, so looking around warms the cache offline mode later relies on. Zoom
 above z11 buys nothing: the source is ~30 m data, and z13 reproduces the
 Matterhorn's summit within 3 m of what z11 gives.
 
-**Rendering.** The mesh is polar: rays fan out from the observer at a fixed
-angular step and march outwards with a step that grows to match, in three
-segments — geometric near (so the ground at your feet is not one enormous
-triangle), one DEM post per step through the middle, geometric again far out.
-Triangles stay roughly constant in screen space from 2 m to 270 km, and only the
-azimuth wedge in front of the camera is drawn, about a sixth of the panorama at
-a typical field of view. Vertices carry no attributes at all: each derives its
-(bearing, range) from `gl_VertexID`/`gl_InstanceID` and samples its own height
-from the clipmap texture array. Occlusion comes from the depth buffer, which is
-logarithmic because one 24-bit buffer has to separate a boulder 3 m away from a
-ridge 270 km away.
+**Rendering.** Two WGSL passes through Babylon. The terrain pass draws a polar
+mesh into an offscreen buffer holding only the distance to each fragment; the
+composite pass runs an edge detector over it and lays the black outline over the
+camera image. The mesh is polar: rays fan out at a fixed angular step and march
+outwards with a step that grows to match, in three segments — geometric near (so
+the ground at your feet is not one enormous triangle), one DEM post per step
+through the middle, geometric again far out. It is split into 32 azimuth sectors
+and only the wedge in front of the camera is submitted. Depth is logarithmic,
+mapped to WebGPU's [0,1] clip range, because one 24-bit buffer has to separate a
+boulder 3 m away from a ridge 270 km away.
+
+Every texture is rgba8unorm on purpose. Float and integer formats carry
+filterability and bind-group conditions that vary by device; heights are packed
+into two bytes and ranges into three, and nothing needs a device feature.
 
 **The outline** is an edge detector run over a range buffer, not over the shaded
 image. Ridge lines therefore come out of the geometry rather than the lighting,
@@ -50,19 +54,20 @@ worth 0.83° and 0.10° of apparent elevation there, measured off the rendered
 image and matching theory. Refraction uses the surveyor's effective-radius
 model, R/(1−k) with k = 0.13.
 
-**Labels.** Summits are projected into camera space and depth-tested against the
-rendered terrain by drawing one point per summit into a 64-wide off-screen
-buffer, where each looks up the terrain's range at its own projected position.
-One draw and one small read-back settle every label. Anchors sit at the DEM's
-summit rather than the catalogue's — the two disagree by ~120 m on the
-Matterhorn — so a marker never floats above its own mountain. Placement is
-importance-ordered greedy stacking that drops what will not fit rather than
-overlapping it.
+**Labels.** Which summits the terrain hides is answered by marching the
+elevation model along each sightline and tracking the highest apparent elevation
+angle — using the same curvature and refraction terms as the renderer, so the
+two cannot disagree about the horizon. That depends on where you stand, not
+where you point, so it runs once per position rather than once per frame, and
+the summit list can say what is behind you. Anchors sit at the DEM's summit
+rather than the catalogue's — the two disagree by ~120 m on the Matterhorn — so
+a marker never floats above its own mountain.
 
-**Pose.** Position from GPS; altitude never from GPS. A phone's vertical fix is
-routinely tens of metres out and an eye placed 30 m too high tilts the whole
-horizon, so altitude is sampled from the DEM and an eye height added.
-Orientation is magnetometer plus gyroscope: the gyro is integrated between
+**Pose.** Position and altitude both from GPS. Altitude is the weaker half of a
+fix — the value is height above the WGS84 ellipsoid, and its accuracy is usually
+several times the horizontal figure — so the elevation model's own ground height
+is shown next to it in the Check panel and used whenever the device reports no
+altitude at all. Orientation is magnetometer plus gyroscope: the gyro is integrated between
 compass updates and bled back onto the compass with a 0.7 s time constant.
 Magnetic declination comes from WMM-2025 — a centred-dipole approximation is
 ~16° wrong in the Alps, which is useless. The DeviceOrientation Euler sequence
@@ -70,44 +75,55 @@ is Z-X'-Y'', degenerate at beta = 90 which is exactly how a phone is held in AR,
 so the code builds the full rotation matrix rather than trusting alpha.
 
 **What is deliberately absent** is any registration against the camera image.
-Alignment is sensors plus a manual offset the user drags in — which is why that
-offset exists, and why the app shows it as a dot orbiting the compass rather
-than hiding it.
+Alignment is sensors plus what you drag in: left/right shifts the heading,
+up/down shifts the pitch, and both persist as offsets so the correction sticks
+as you turn around. The compass shows how much is applied.
+
+**Capture.** The composite is re-rendered into an offscreen target rather than
+scraped off the visible canvas — a WebGPU swap-chain texture is not reliably
+readable after presentation — then the labels are drawn on and the PNG goes
+through the Web Share API, which is the only route a web page has into the
+Photos app. Where sharing files is unsupported it downloads instead.
 
 ## Layout
 
-    src/core/       geodesy, clipmap heightfield, camera, labels, pose, catalogue
-    src/render/     WebGL2 passes: terrain, silhouette compose, visibility probe
+    src/core/       geodesy, clipmap heightfield, camera, labels, pose, horizon
+    src/render/gpu/ WGSL sources and the Babylon WebGPU renderer
     src/sources/    terrarium tiles, IndexedDB store, clipmap streamer, Overpass
-    src/app/        the app — viewer, camera feed, shell
-    src/preview/    the six step-by-step preview pages
+    src/app/        the app — viewer, camera feed, capture, shell
+    src/preview/    the published preview build
     src/ui/         label painter, compass rose, plan view
-    tools/          data baking, region codegen, bundling, screenshots
+    tools/          data baking, codegen, bundling, shader and geometry checks
 
-`src/main.ts` wires the app to the network sources; `src/preview/step6.ts` wires
+`src/main.ts` wires the app to the network sources; `src/preview/app.ts` wires
 the same `App` class to bundled data. That is the only difference between them.
 
-## Previews
+## Preview
 
-Each step builds to one self-contained HTML file with no external requests —
-which is why the elevation data travels as data: URIs inside the bundle.
+One self-contained HTML file with no external requests, which is why the
+elevation data travels as data: URIs inside the bundle.
 
-    npm run build:previews          # -> dist/previews/step1..6.html
-    node tools/build_preview.mjs step1
+    npm run build:previews          # -> dist/previews/app.html
 
-| Step | What it adds | What to check |
-| --- | --- | --- |
-| 1 | Terrain, curved frame, silhouette | skyline shape; curvature and refraction toggles |
-| 2 | Summit labels, occlusion, layout | right name on right peak; hidden peaks stay hidden |
-| 3 | GPS, DEM altitude, compass fusion | simulated-device mode: heading, pitch, roll, declination |
-| 4 | AR camera overlay | outline on the real ridge; FOV error vs heading error |
-| 5 | Tile streaming, offline storage | clipmap re-centring; the IndexedDB figures are real |
-| 6 | The finished app | the shipping code path, on bundled data |
+## Checks
 
-Headless verification (Chromium + SwiftShader, synthetic camera):
+WebGPU cannot run in CI here, so correctness is established without a GPU:
 
-    node tools/shot.mjs dist/previews/step1.html out.png 900x600
-    node tools/shots.mjs dist/previews/step6.html outdir spec.json 430x880
+    npm run check        # tsc, then both of the below
+
+`tools/check_wgsl.mjs` puts the shaders through **Babylon's own preprocessor and
+finalize step** — the same code path the engine uses — then parses the result as
+WGSL and asserts that every uniform the material sets reaches the generated
+struct and is referenced through it. This caught two real defects that would
+otherwise have been a black screen on device: uniforms referenced without the
+`uniforms.` prefix, and the engine module import cycle.
+
+`tools/check_math.mjs` mirrors the vertex shader's geometry in float32 and
+compares it against the double-precision routines the labels and horizon test
+use. Current agreement: 0.06 m of position, 0.002 clipmap pixels at z12.
+
+What no check here can establish is that the pipeline links on a real device or
+that the picture looks right. That needs a phone.
 
 ## Demo data
 
@@ -143,3 +159,7 @@ OpenStreetMap.
   data is ~30 m. The label card shows the deficit rather than hiding it.
 - **Coverage** is 80°N to 80°S, wherever the tile source has data.
 - A cold start at a new position fetches ~64 tiles (~6 MB) for a 150 km radius.
+- **No WebGL fallback.** On a browser without WebGPU the app says so and stops.
+- **GPS altitude** is used as asked, and it is noisy. If the horizon sits high or
+  low by a consistent amount, that is usually the altitude, not the compass —
+  the Check panel shows the GPS value and the elevation model's side by side.

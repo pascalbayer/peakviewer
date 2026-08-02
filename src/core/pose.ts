@@ -1,10 +1,13 @@
 /**
  * Where the observer is and which way they are facing.
  *
- * Position comes from GPS, altitude does not: a phone's vertical fix is
- * routinely tens of metres out, and an eye placed 30 m too high tilts the
- * entire horizon. The DEM under a known lat/lon is far better, so altitude is
- * always sampled from the terrain and an eye height added.
+ * Position and altitude both come from GPS. The vertical fix is the weaker of
+ * the two — a phone reports altitude above the WGS84 ellipsoid, which differs
+ * from height above sea level by tens of metres depending on where you are,
+ * and its accuracy is typically several times the horizontal figure. The app
+ * therefore reports the DEM's own value alongside it and falls back to the DEM
+ * when the device gives no altitude at all, which is common indoors and on
+ * hardware without a barometer.
  *
  * Orientation is magnetometer plus gyroscope. The magnetometer is absolute but
  * noisy and slow; the gyroscope is smooth and fast but drifts. Integrating the
@@ -52,6 +55,9 @@ export interface PoseStatus {
   permission: 'unknown' | 'granted' | 'denied' | 'unavailable';
   gpsAccuracy: number | null;
   gpsAge: number | null;
+  /** Altitude the device reported, metres above the WGS84 ellipsoid. */
+  gpsAltitude: number | null;
+  gpsAltitudeAccuracy: number | null;
 }
 
 const DEG = Math.PI / 180;
@@ -144,6 +150,8 @@ export class PoseTracker {
     permission: 'unknown',
     gpsAccuracy: null,
     gpsAge: null,
+    gpsAltitude: null,
+    gpsAltitudeAccuracy: null,
   };
 
   lon = 0;
@@ -170,10 +178,13 @@ export class PoseTracker {
     this.setOffset(this.status.offset + deltaDeg);
   }
 
-  setPosition(lon: number, lat: number, accuracy: number | null = null) {
+  setPosition(lon: number, lat: number, accuracy: number | null = null,
+    altitude: number | null = null, altitudeAccuracy: number | null = null) {
     this.lon = lon;
     this.lat = lat;
     this.status.gpsAccuracy = accuracy;
+    this.status.gpsAltitude = altitude;
+    this.status.gpsAltitudeAccuracy = altitudeAccuracy;
     this.status.declination = declinationAt(lon, lat);
     this.opt.onPosition?.(lon, lat, accuracy ?? 0);
   }
@@ -280,8 +291,8 @@ export class PoseTracker {
       this.watchId = navigator.geolocation.watchPosition(
         (p) => {
           this.lastFix = performance.now();
-          // Altitude from p.coords.altitude is deliberately ignored.
-          this.setPosition(p.coords.longitude, p.coords.latitude, p.coords.accuracy);
+          this.setPosition(p.coords.longitude, p.coords.latitude, p.coords.accuracy,
+            p.coords.altitude, p.coords.altitudeAccuracy);
         },
         () => { this.status.gpsAccuracy = null; },
         { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 },

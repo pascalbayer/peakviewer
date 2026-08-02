@@ -47,7 +47,7 @@ async function boot() {
       },
     };
 
-    msg.textContent = 'loading terrain…';
+    msg.textContent = 'starting WebGPU…';
     bar.style.width = '40%';
     const app = new App(document.body, sources);
     await app.start();

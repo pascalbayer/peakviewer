@@ -36,6 +36,16 @@ export function effectiveRadius(k = REFRACTION_K): number {
 }
 
 /**
+ * The same thing at a given latitude. The renderer and the label geometry must
+ * use one radius between them: mixing the mean radius here with the local one
+ * in `curvatureDrop` puts the drawn skyline and the labelled summits about six
+ * metres apart at 270 km. Small, but free to avoid.
+ */
+export function effectiveRadiusAt(latDeg: number, k = REFRACTION_K): number {
+  return localRadius(latDeg) / (1 - k);
+}
+
+/**
  * Radius of curvature of the ellipsoid at a latitude, averaged over azimuth
  * (the Gaussian mean radius). Using this instead of R_MEAN removes a ~0.3%
  * bias in the curvature drop, i.e. ~20 m at 300 km.

@@ -1,21 +1,19 @@
 /**
  * The viewer: terrain, labels and selection in one object.
  *
- * Everything above this — the preview pages and the installed app — differs
- * only in where the elevation data and the summit catalogue come from and in
- * what drives the camera.
+ * Everything above this — the installed app and the published preview —
+ * differs only in where the elevation data and the summit catalogue come from.
  */
 
 import { Camera } from '../core/camera';
 import { HeightField } from '../core/heightfield';
+import { computeVisibility } from '../core/horizon';
 import {
   LabelTarget, PlacedLabel, buildTargets, layoutLabels, pickLabel,
 } from '../core/labels';
 import { Peak } from '../core/peaks';
-import { LabelPainter } from '../ui/labelPainter';
-import { VisibilityProbe } from '../render/probe';
-import { Scene } from '../render/scene';
-import type { Style } from '../render/compose';
+import { LabelPainter, ON_WHITE } from '../ui/labelPainter';
+import { GpuRenderer, Quality } from '../render/gpu/renderer';
 
 export interface ViewerOptions {
   canvas: HTMLCanvasElement;
@@ -23,10 +21,7 @@ export interface ViewerOptions {
 }
 
 export class PeakViewer {
-  readonly scene: Scene;
   readonly painter: LabelPainter;
-  private probe: VisibilityProbe;
-
 
   peaks: Peak[] = [];
   targets: LabelTarget[] = [];
@@ -34,29 +29,37 @@ export class PeakViewer {
   selected: PlacedLabel | null = null;
 
   showLabels = true;
-  maxLabels = 26;
-  detailedLabels = 8;
+  maxLabels = 22;
+  detailedLabels = 6;
   /** Summits beyond this are not labelled at all, metres. */
   labelRange = 260000;
+  /** Set from GPS when available, otherwise sampled from the DEM. */
+  eyeAltitude = 0;
+  /** Where the current eye altitude came from. */
+  altitudeSource: 'gps' | 'dem' = 'dem';
+  visibleCount = 0;
+  lastVisibilityMs = 0;
 
-  /** Slack on the occlusion test. Set very large to label everything. */
-  set occlusionTolerance(v: number) { this.probe.tolerance = v; }
-  get occlusionTolerance(): number { return this.probe.tolerance; }
-
-  constructor(opt: ViewerOptions) {
-    this.scene = new Scene(opt.canvas);
-    this.painter = new LabelPainter(opt.overlay);
-    this.probe = new VisibilityProbe(this.scene.gl);
+  private constructor(readonly renderer: GpuRenderer, overlay: HTMLCanvasElement) {
+    this.painter = new LabelPainter(overlay);
+    this.painter.style = ON_WHITE;
   }
 
-  get camera(): Camera { return this.scene.camera; }
-  get heightField(): HeightField | null { return this.scene.heightField; }
-  set style(s: Style) { this.scene.style = s; }
-  get style(): Style { return this.scene.style; }
+  static async create(opt: ViewerOptions, quality?: Quality): Promise<PeakViewer> {
+    const renderer = await GpuRenderer.create(opt.canvas, quality);
+    return new PeakViewer(renderer, opt.overlay);
+  }
+
+  get camera(): Camera { return this.renderer.camera; }
+  get heightField(): HeightField | null { return this.renderer.heightField; }
 
   setHeightField(hf: HeightField) {
-    this.scene.setHeightField(hf);
+    this.renderer.setHeightField(hf);
     this.rebuildTargets();
+  }
+
+  refreshHeights() {
+    if (this.renderer.heightField) this.renderer.setHeightField(this.renderer.heightField);
   }
 
   setPeaks(peaks: Peak[]) {
@@ -64,37 +67,45 @@ export class PeakViewer {
     this.rebuildTargets();
   }
 
-  moveTo(lon: number, lat: number, eye?: number) {
-    this.scene.moveTo(lon, lat, eye);
+  /**
+   * Moves the eye. `eyeAlt` is absolute: GPS altitude plus eye height when the
+   * device reports one, the DEM's ground plus eye height when it does not.
+   */
+  moveTo(lon: number, lat: number, eyeAlt: number, source: 'gps' | 'dem') {
+    this.eyeAltitude = eyeAlt;
+    this.altitudeSource = source;
+    this.renderer.moveTo(lon, lat, eyeAlt);
     this.rebuildTargets();
   }
 
-  /** Recomputes summit geometry. Cheap enough to run whenever the eye moves. */
+  get groundBelow(): number {
+    const hf = this.renderer.heightField;
+    return hf ? hf.groundAt(hf.lon, hf.lat) : 0;
+  }
+
+  /** Recomputes summit geometry and which of them the terrain hides. */
   rebuildTargets() {
-    const hf = this.scene.heightField;
-    if (!hf || !this.peaks.length) { this.targets = []; return; }
+    const hf = this.renderer.heightField;
+    if (!hf || !this.peaks.length) { this.targets = []; this.visibleCount = 0; return; }
     const range = Math.min(this.labelRange, hf.maxRange);
-    this.targets = buildTargets(this.peaks, this.scene.observer, hf, range);
-    this.probe.setTargets(this.targets);
+    const obs = { lon: hf.lon, lat: hf.lat, ground: this.eyeAltitude, eye: 0 };
+    this.targets = buildTargets(this.peaks, obs, hf, range);
+    const t0 = performance.now();
+    this.visibleCount = computeVisibility(this.targets, hf, this.eyeAltitude);
+    this.lastVisibilityMs = performance.now() - t0;
     this.selected = null;
   }
 
   render() {
-    this.scene.render();
+    this.renderer.render();
     const overlay = this.painter.canvas;
     const cssW = overlay.clientWidth || 1;
     const cssH = overlay.clientHeight || 1;
     this.painter.resize(cssW, cssH);
 
-    if (!this.showLabels || !this.targets.length) {
-      this.placed = [];
-      return;
-    }
+    if (!this.showLabels || !this.targets.length) { this.placed = []; return; }
 
-    this.probe.run(this.targets, this.scene.camera,
-      this.scene.rangeTexture, this.scene.stats.width, this.scene.stats.height);
-
-    this.placed = layoutLabels(this.targets, this.scene.camera, {
+    this.placed = layoutLabels(this.targets, this.camera, {
       width: cssW,
       height: cssH,
       measure: this.painter.measure,
@@ -111,16 +122,11 @@ export class PeakViewer {
     this.painter.draw(this.placed, this.selected);
   }
 
-  /** Returns the newly selected label, or null when the tap hit nothing. */
   pick(x: number, y: number): PlacedLabel | null {
     const hit = pickLabel(this.placed, x, y);
     this.selected = hit;
     return hit;
   }
 
-  get visibleCount(): number {
-    let n = 0;
-    for (const t of this.targets) if (t.visible) n++;
-    return n;
-  }
+  dispose() { this.renderer.dispose(); }
 }
