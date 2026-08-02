@@ -532,8 +532,14 @@ export class App {
 
   private async loadPeaks(lon: number, lat: number) {
     try {
-      this.viewer?.setPeaks(await this.sources.peaks(lon, lat, 260));
+      const peaks = await this.sources.peaks(lon, lat, 260);
+      this.viewer?.setPeaks(peaks);
       this.refreshPeakList();
+      // A summit lookup that fails comes back empty rather than throwing —
+      // offline is a normal state for this app — so an unexplained absence of
+      // labels is the only thing the user would otherwise see.
+      if (!peaks.length) this.note = 'no summit names here yet';
+      else if (this.note === 'no summit names here yet') this.note = '';
     } catch (e) {
       this.note = e instanceof Error ? e.message : 'summit lookup failed';
     }
@@ -738,6 +744,11 @@ export class App {
       ['Render size', d?.size ?? '—'],
       ['Frame', `${(d?.frameMs ?? 0).toFixed(1)} ms`],
       ['Visibility pass', `${(this.viewer?.lastVisibilityMs ?? 0).toFixed(1)} ms`],
+      // Labels are always on; when none appear it is one of these two that is
+      // zero, and they fail for entirely different reasons.
+      ['Summits loaded', String(this.viewer?.peaks.length ?? 0)],
+      ['Labels on screen', `${this.viewer?.placed.length ?? 0} drawn, `
+        + `${this.viewer?.visibleCount ?? 0} of ${this.viewer?.targets.length ?? 0} unhidden`],
       ['Camera', f.active ? `${f.width}×${f.height}` : (f.error ?? 'off')],
       ['Lens FOV', `${f.fovY.toFixed(1)}° (${f.fovSource})`],
       ['GPS accuracy', s.gpsAccuracy === null ? 'no fix' : `±${s.gpsAccuracy.toFixed(0)} m`],

@@ -33,6 +33,17 @@ export interface Level extends LevelSpec {
   cx: number;
   cy: number;
   version: number;
+  /**
+   * Whether this level holds real data yet.
+   *
+   * A streamed level is allocated empty and filled later, and an empty raster
+   * is not "no answer" — it reads as a uniform `bias` metres, which is a
+   * perfectly plausible-looking elevation. Sampling has to skip it, or a cold
+   * start reports the observer standing 2.6 km below the valley floor for as
+   * long as the fill takes, and every horizon that depends on eye height is
+   * wrong for that whole window.
+   */
+  filled: boolean;
 }
 
 export interface Observer {
@@ -74,9 +85,10 @@ export class HeightField {
     l.maxRange = Math.max(0, inset - 2) * l.res;
   }
 
-  addLevel(spec: LevelSpec, raw: Uint16Array): Level {
+  /** `filled` is false for a level that is allocated now and streamed later. */
+  addLevel(spec: LevelSpec, raw: Uint16Array, filled = true): Level {
     const l: Level = {
-      ...spec, raw, res: 0, maxRange: 0, cx: 0, cy: 0, version: 0,
+      ...spec, raw, res: 0, maxRange: 0, cx: 0, cy: 0, version: 0, filled,
     };
     this.refreshOrigin(l);
     this.levels.push(l);
@@ -121,12 +133,17 @@ export class HeightField {
    */
   height(lon: number, lat: number, range = 0): number {
     for (const l of this.levels) {
-      if (range > l.maxRange) continue;
+      if (range > l.maxRange || !l.filled) continue;
       const h = this.heightIn(l, lon, lat);
       if (!Number.isNaN(h)) return h;
     }
+    // Coarsest-first fallback: a level that covers the point at lower
+    // resolution beats one that has not been fetched, and during a cold start
+    // the coarse levels land first.
     for (let i = this.levels.length - 1; i >= 0; i--) {
-      const h = this.heightIn(this.levels[i], lon, lat);
+      const l = this.levels[i];
+      if (!l.filled) continue;
+      const h = this.heightIn(l, lon, lat);
       if (!Number.isNaN(h)) return h;
     }
     return 0;
@@ -149,7 +166,7 @@ export class HeightField {
    * label on the summit the renderer draws instead of on its flank.
    */
   summitNear(lon: number, lat: number, radius = 120): number {
-    const l = this.levels.find((lv) => !Number.isNaN(this.heightIn(lv, lon, lat)));
+    const l = this.levels.find((lv) => lv.filled && !Number.isNaN(this.heightIn(lv, lon, lat)));
     if (!l) return 0;
     const { u, v } = this.project(l, lon, lat);
     const n = Math.max(1, Math.round(radius / l.res));

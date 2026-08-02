@@ -72,7 +72,7 @@ export class ClipmapStreamer {
       const py0 = Math.round(latToMercY(lat, spec.z)) - (size >> 1);
       const lv = this.heightField.addLevel({
         z: spec.z, px0, py0, w: size, h: size, quant: QUANT, bias: BIAS,
-      }, new Uint16Array(size * size));
+      }, new Uint16Array(size * size), false);
       this.levels.push(lv);
       this.loaded.push(null);
     }
@@ -140,6 +140,7 @@ export class ClipmapStreamer {
       }));
       if (gen !== this.generation) return;
       lv.version++;
+      lv.filled = true;
       this.loaded[job.index] = `${lv.z}:${job.px0}:${job.py0}`;
       this.progress.levelsReady++;
       this.onUpdate?.(job.index);

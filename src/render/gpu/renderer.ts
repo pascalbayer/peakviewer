@@ -492,7 +492,12 @@ export class GpuRenderer {
   private syncLevels(hf: HeightField) {
     hf.levels.forEach((l, i) => {
       const pxPerRad = (256 * (1 << l.z)) / (2 * Math.PI);
-      this.lvlA.set([l.cx, l.cy, pxPerRad, l.maxRange], i * 4);
+      // A level that has not been fetched yet advertises no range, so the
+      // shader's search for the finest level covering a point steps over it.
+      // Otherwise a cold start draws the empty raster's uniform bias as a plain
+      // at -1000 m in the foreground, with a cliff up to the real terrain
+      // wherever the next level takes over.
+      this.lvlA.set([l.cx, l.cy, pxPerRad, l.filled ? l.maxRange : 0], i * 4);
       // Heights were re-expressed at one metre when the atlas was packed.
       this.lvlB.set([1, HEIGHT_BIAS, l.w, l.h], i * 4);
     });

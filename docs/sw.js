@@ -7,7 +7,7 @@
  * Cache API offers. Duplicating them here would double the storage for no gain.
  */
 
-const SHELL = 'peakviewer-shell-1508559';
+const SHELL = 'peakviewer-shell-1509135';
 const FILES = [
   './',
   './index.html',

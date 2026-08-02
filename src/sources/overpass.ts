@@ -22,6 +22,12 @@ const CACHE_DB = 'peakviewer-peaks';
 const STORE = 'cells';
 /** OSM edits reach the app within a day, so a cell older than this is refetched. */
 const MAX_AGE_MS = 24 * 60 * 60 * 1000;
+/**
+ * How long a cell that failed waits before it is worth asking again. The public
+ * Overpass endpoints rate-limit hard and answer 429 or 504 under load, so a
+ * failure says more about the minute than about the place.
+ */
+const RETRY_MS = 30 * 1000;
 
 interface CellRecord {
   id: string;
@@ -100,6 +106,8 @@ export class OverpassPeaks {
   private db: Promise<IDBDatabase> | null = null;
   private cells = new Map<string, Peak[]>();
   private inflight = new Map<string, Promise<Peak[]>>();
+  /** Cell id -> when it is worth querying again after a failure. */
+  private cooldown = new Map<string, number>();
 
   private handle(): Promise<IDBDatabase> {
     if (!this.db) this.db = openDb();
@@ -158,17 +166,24 @@ export class OverpassPeaks {
         this.cells.set(id, cached.peaks);
         return cached.peaks;
       }
+      // Still cooling off from a failure: hand back whatever is on disk rather
+      // than queueing another request that is likely to be refused too.
+      if (Date.now() < (this.cooldown.get(id) ?? 0)) return cached?.peaks ?? [];
+
       const [la, lo] = id.split('_').map(Number);
       const fresh = await this.query(la, lo);
       if (fresh) {
+        this.cooldown.delete(id);
         this.cells.set(id, fresh);
         void this.writeCell({ id, peaks: fresh, fetched: Date.now() });
         return fresh;
       }
       // Network failed: stale beats nothing, and offline is the normal case.
-      const fallback = cached?.peaks ?? [];
-      this.cells.set(id, fallback);
-      return fallback;
+      // The failure is deliberately *not* remembered as a result — caching an
+      // empty list in `cells` would make one rate-limited request mean no
+      // summit names at all until the page is reloaded.
+      this.cooldown.set(id, Date.now() + RETRY_MS);
+      return cached?.peaks ?? [];
     })().finally(() => this.inflight.delete(id));
 
     this.inflight.set(id, job);
@@ -188,7 +203,13 @@ export class OverpassPeaks {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: `data=${encodeURIComponent(q)}`,
           });
-          if (!res.ok) continue;
+          if (!res.ok) {
+            // 429 and 504 are the usual answers from a busy public endpoint,
+            // and they are worth showing: "no summit names" and "Overpass is
+            // rate-limiting you" look identical from the viewfinder.
+            this.status.lastError = `${new URL(url).host}: HTTP ${res.status}`;
+            continue;
+          }
           const json = await res.json() as { elements?: OverpassElement[] };
           this.status.lastError = null;
           this.status.offline = false;

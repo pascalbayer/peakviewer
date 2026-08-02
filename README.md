@@ -46,6 +46,12 @@ IndexedDB, so looking around warms the cache offline mode later relies on. Zoom
 above z11 buys nothing: the source is ~30 m data, and z13 reproduces the
 Matterhorn's summit within 3 m of what z11 gives.
 
+A level that has not arrived yet is skipped rather than sampled. An empty
+raster is not "no answer" — it reads as a uniform −1000 m, which is a perfectly
+plausible elevation — and since levels fill coarsest-first, sampling it would
+put the observer 2.6 km under the valley floor for the whole of a cold start,
+taking the horizon and every label's visibility with it.
+
 **Rendering.** Two passes through Babylon. The terrain pass draws a polar
 mesh into an offscreen buffer holding only the distance to each fragment; the
 composite pass runs an edge detector over it and lays the black outline over the
@@ -82,6 +88,14 @@ where you point, so it runs once per position rather than once per frame, and
 the summit list can say what is behind you. Anchors sit at the DEM's summit
 rather than the catalogue's — the two disagree by ~120 m on the Matterhorn — so
 a marker never floats above its own mountain.
+
+Labels are always on; there is no switch. When none appear it is because one of
+two counts is zero, and the Check panel separates them: **Summits loaded** is
+the OpenStreetMap lookup, and **Labels on screen** is how many survived the
+horizon test and the collision layout. A summit lookup that fails comes back
+empty rather than throwing — offline is a normal state here — so the status line
+says so instead of leaving an unexplained empty sky, and a rate-limited Overpass
+is retried rather than remembered as "no peaks here".
 
 **Pose.** Position and altitude both from GPS. Altitude is the weaker half of a
 fix — the value is height above the WGS84 ellipsoid, and its accuracy is usually
