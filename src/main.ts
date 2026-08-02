@@ -12,6 +12,9 @@ import { TerrariumSource } from './sources/terrarium';
 import { TileStore } from './sources/tilestore';
 import { TileKey } from './sources/types';
 import { domReady, el } from './ui/dom';
+import {
+  DEFAULT_ALIGN, DEFAULT_PROFILE, extractSkyline, horizonProfile, matchSkyline, profileAt,
+} from './core/align';
 
 const HOME = { lon: 7.78472, lat: 45.98333, name: 'Gornergrat' };
 
@@ -65,6 +68,11 @@ async function boot() {
       navigator.serviceWorker.register('./sw.js').catch(() => { /* offline shell is optional */ });
     }
     (window as unknown as Record<string, unknown>).peak = { app, tiles, peaks, store };
+    // The alignment primitives, for poking at from the console on a device.
+    // Already in the bundle — the app calls them — so this costs a reference.
+    (window as unknown as Record<string, unknown>).__align = {
+      horizonProfile, profileAt, extractSkyline, matchSkyline, DEFAULT_PROFILE, DEFAULT_ALIGN,
+    };
   } catch (e) {
     msg.remove();
     boot0.append(el('div', { class: 'err' },

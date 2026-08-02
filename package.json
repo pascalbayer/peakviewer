@@ -22,8 +22,9 @@
     "preview": "node tools/build_preview.mjs app",
     "serve": "node -e \"require(\\\"http\\\").createServer((q,s)=>{const f=require(\\\"path\\\").join(\\\"dist/app\\\",q.url===\\\"/\\\"?\\\"index.html\\\":q.url);require(\\\"fs\\\").readFile(f,(e,d)=>{if(e){s.writeHead(404);return s.end()}s.writeHead(200,{\\\"content-type\\\":{html:\\\"text/html\\\",js:\\\"text/javascript\\\",css:\\\"text/css\\\",png:\\\"image/png\\\",webmanifest:\\\"application/manifest+json\\\"}[f.split(\\\".\\\").pop()]||\\\"application/octet-stream\\\"});s.end(d)})}).listen(8080,()=>console.log(\\\"http://localhost:8080\\\"))\"",
     "check:shaders": "node tools/check_wgsl.mjs && node tools/check_math.mjs",
+    "check:align": "node tools/check_align.mjs",
     "check:gpu": "node tools/check_gpu.mjs",
-    "check": "tsc --noEmit && npm run check:shaders && npm run check:gpu",
+    "check": "tsc --noEmit && npm run check:shaders && npm run check:align && npm run check:gpu",
     "build:pages": "npm run check && npm run gen:region && node tools/build_app.mjs docs && node tools/build_preview.mjs app && node tools/copy_demo.mjs && node tools/gen_notices.mjs"
   },
   "dependencies": {

@@ -25,6 +25,9 @@ import {
   PermissionKind, PermissionReport, PermissionState, inspect, recoveryHint, requestAll,
 } from './permissions';
 import { CompassRose } from '../ui/compass';
+import {
+  AlignResult, DEFAULT_ALIGN, DEFAULT_PROFILE, extractSkyline, horizonProfile, matchSkyline,
+} from '../core/align';
 import { Backend, QUALITY_HIGH, QUALITY_LOW, webgpuAvailable } from '../render/gpu/renderer';
 import { OTHER_CREDITS, TERRAIN_CREDITS } from '../core/attribution';
 import { el } from '../ui/dom';
@@ -76,6 +79,7 @@ export class App {
   private note = '';
   private busy = false;
   private adjusting = false;
+  private lastAlign: AlignResult | null = null;
 
   constructor(readonly root: HTMLElement, readonly sources: AppSources) {
     this.canvas = el('canvas', { class: 'view' });
@@ -123,6 +127,7 @@ export class App {
     const left = el('div', { class: 'actions' },
       this.icon('◎', 'Use my location', () => void this.locate()),
       this.icon('⊕', 'Follow device orientation', () => void this.toggleSensors()),
+      this.icon('⌖', 'Match the outline to the view', () => void this.autoAlign()),
     );
     const right = el('div', { class: 'actions' },
       this.icon('🔓', 'Device permissions', () => void this.showGate(true)),
@@ -589,6 +594,74 @@ export class App {
     return true;
   }
 
+  /**
+   * Fit the drawn skyline onto the one in the camera frame.
+   *
+   * A proposal, not a verdict. It applies the correction only when the match
+   * is both a good fit and clearly better than the alternatives, says why when
+   * it is not, and leaves the drag as the authority either way — an automatic
+   * alignment that is quietly wrong is worse than none, because the user has no
+   * reason to doubt it.
+   */
+  async autoAlign(): Promise<AlignResult | null> {
+    if (!this.viewer || this.busy) return null;
+    if (!await this.enableCamera()) return null;
+    const video = this.feed.video;
+    if (!video.videoWidth || !video.videoHeight) { this.note = 'no camera frame yet'; return null; }
+    if (!this.filled) { this.note = 'still fetching terrain — try again in a moment'; return null; }
+
+    this.busy = true;
+    this.note = 'matching the skyline…';
+    try {
+      // Grab at a modest size: the extractor works at ~192 px anyway, and a
+      // full-resolution frame is a pointless copy on a phone.
+      const gw = Math.min(480, video.videoWidth);
+      const gh = Math.round(gw * video.videoHeight / video.videoWidth);
+      const cv = document.createElement('canvas');
+      cv.width = gw;
+      cv.height = gh;
+      const ctx = cv.getContext('2d', { willReadFrequently: true });
+      if (!ctx) { this.note = 'cannot read the camera frame'; return null; }
+      ctx.drawImage(video, 0, 0, gw, gh);
+      const frame = ctx.getImageData(0, 0, gw, gh);
+
+      const cam = this.viewer.camera;
+      const hf = this.streamer.heightField;
+      // Only the arc the search can reach, plus the frame's own width.
+      const half = cam.hfov / 2 + DEFAULT_ALIGN.yawRange + 4;
+      const profile = horizonProfile(hf, this.viewer.eyeAltitude, {
+        ...DEFAULT_PROFILE, from: cam.yaw - half, span: 2 * half,
+      });
+      const sky = extractSkyline(frame.data, gw, gh);
+      const res = matchSkyline(sky, profile, {
+        yaw: cam.yaw,
+        pitch: cam.pitch,
+        roll: cam.roll,
+        fovY: this.feed.status.fovY,
+        aspect: video.videoWidth / video.videoHeight,
+      });
+      this.lastAlign = res;
+
+      if (!res.ok) {
+        this.note = `no confident match — ${res.why}`;
+        return res;
+      }
+      this.pose.nudgeOffset(res.dYaw);
+      this.pitchOffset = clamp(this.pitchOffset + res.dPitch, -45, 45);
+      cam.yaw = (cam.yaw + res.dYaw + 360) % 360;
+      cam.pitch = clamp(cam.pitch + res.dPitch, -85, 85);
+      this.note = `aligned ${signed(res.dYaw)}° / ${res.dPitch.toFixed(1)}° `
+        + `(${(res.confidence * 100).toFixed(0)}% confident)`;
+      setTimeout(() => { if (this.note.startsWith('aligned')) this.note = ''; }, 4000);
+      return res;
+    } catch (e) {
+      this.note = e instanceof Error ? e.message : 'alignment failed';
+      return null;
+    } finally {
+      this.busy = false;
+    }
+  }
+
   private async capture() {
     if (!this.viewer || this.busy) return;
     this.busy = true;
@@ -760,6 +833,13 @@ export class App {
       ['Declination', `${s.declination.toFixed(2)}°`],
       ['Heading offset', `${signed(s.offset)}°`],
       ['Pitch offset', `${this.pitchOffset.toFixed(2)}°`],
+      ['Auto-align', this.lastAlign
+        ? `${this.lastAlign.ok ? 'applied' : 'declined'} `
+          + `${signed(this.lastAlign.dYaw)}° / ${this.lastAlign.dPitch.toFixed(1)}°, `
+          + `fit ${(this.lastAlign.fit * 100).toFixed(0)}%, `
+          + `confidence ${(this.lastAlign.confidence * 100).toFixed(0)}%, `
+          + `${(this.lastAlign.coverage * 100).toFixed(0)}% of frame`
+        : 'not run'],
     ];
     panel.textContent = '';
     panel.append(

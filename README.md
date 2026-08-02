@@ -108,10 +108,41 @@ Magnetic declination comes from WMM-2025 — a centred-dipole approximation is
 is Z-X'-Y'', degenerate at beta = 90 which is exactly how a phone is held in AR,
 so the code builds the full rotation matrix rather than trusting alpha.
 
-**What is deliberately absent** is any registration against the camera image.
-Alignment is sensors plus what you drag in: left/right shifts the heading,
+**Alignment** is sensors plus what you drag in: left/right shifts the heading,
 up/down shifts the pitch, and both persist as offsets so the correction sticks
 as you turn around. The compass shows how much is applied.
+
+**Automatic alignment** (the ⌖ button) fits the drawn skyline onto the one in
+the camera frame. It proposes; the drag disposes. A skyline is a
+one-dimensional signal — one horizon row per image column — so both sides
+reduce to a curve of elevation against azimuth and matching is a two-parameter
+search, not image registration in any general sense. The model side is the same
+DEM march the label visibility uses, so the profile being matched is the one on
+screen rather than an approximation of it, and nothing touches the GPU.
+
+Finding the horizon in the frame does *not* use brightness. Snow against blue
+sky inverts it and overcast defeats it; what separates sky from mountain
+reliably is texture, which is near-zero above the horizon and never below it.
+The path is scored as "how far down does the sky reach" — each row gained pays
+for the texture it leaves overhead — which finds the *topmost* transition
+rather than the strongest. That distinction is the whole game: a snow-capped
+ridge usually has a harder edge at the snowline than at the sky, and a detector
+that takes the sharpest transition sits on it happily and biases everything
+after it.
+
+The two axes are not equally good, and the app reports both. **Yaw is
+accurate to a twentieth of a degree** — it is fixed by the shape of the
+skyline and every column votes on it. **Pitch is good to about half a degree**,
+because a constant row bias in the extracted boundary and a genuine pitch error
+are the same observation; nothing in the image distinguishes them, so pitch
+inherits the extractor's sub-pixel accuracy directly. Half a degree is roughly
+the width of the soft ramp a real horizon occupies.
+
+It declines rather than guessing. A fit that is poor, or one that is no better
+than its rivals — an even ridge genuinely does fit in several places — is
+reported and not applied, because an automatic alignment that is quietly wrong
+is worse than none: the user has no reason to doubt it. The Check panel shows
+the fit, the confidence and how much of the frame carried a usable skyline.
 
 **Staying up.** An empty viewfinder is the failure this app is most exposed to,
 because everything looks the same behind it: a shader that did not link, a
@@ -134,7 +165,8 @@ Photos app. Where sharing files is unsupported it downloads instead.
 
 ## Layout
 
-    src/core/       geodesy, clipmap heightfield, camera, labels, pose, horizon
+    src/core/       geodesy, clipmap heightfield, camera, labels, pose, horizon,
+                    skyline matching
     src/render/gpu/ WGSL and GLSL sources, and the Babylon renderer
     src/sources/    terrarium tiles, IndexedDB store, clipmap streamer, Overpass
     src/app/        the app — viewer, camera feed, capture, shell
@@ -192,6 +224,14 @@ otherwise have been a black screen on device: uniforms referenced without the
 `tools/check_math.mjs` mirrors the vertex shader's geometry in float32 and
 compares it against the double-precision routines the labels and horizon test
 use. Current agreement: 0.06 m of position, 0.002 clipmap pixels at z12.
+
+`tools/check_align.mjs` builds a synthetic world, renders what a camera pointed
+into it would see, tells the matcher a *wrong* pose and checks it recovers the
+difference — currently 0.05° of yaw and 0.5° of pitch. It also checks the
+refusals: a frame that is entirely fog, and a skyline belonging to somewhere
+else. The fixture is deliberately hostile to the easy cue, with terrain
+brighter than the sky the way snow is, because anything separating them by
+brightness passes the flat cases and fails on a glacier.
 
 `tools/check_gpu.mjs` runs the renderer on an actual WebGPU device — Chromium's
 SwiftShader adapter — over a synthetic ridge, and reads the pixels back. That
@@ -262,9 +302,10 @@ reasonably look, not only in a repository. The app therefore carries a
 
 ## Known limits
 
-- **Alignment drift** is the main failure mode, as it is for any sensor-only AR
-  peak finder. Magnetometers are disturbed by ski lifts, cars and phone cases.
-  Drag to correct; the compass dot shows how much correction is applied.
+- **Alignment drift** is the main failure mode. Magnetometers are disturbed by
+  ski lifts, cars and phone cases. The ⌖ button will usually fix the heading
+  outright when there is a skyline to match; failing that, drag, and the
+  compass dot shows how much correction is applied.
 - **DEM resolution** rounds sharp summits off. The Matterhorn reads 4355 m
   against a catalogued 4478 m, and no zoom level fixes it because the source
   data is ~30 m. The label card shows the deficit rather than hiding it.
