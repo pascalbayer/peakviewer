@@ -87,6 +87,19 @@ Alignment is sensors plus what you drag in: left/right shifts the heading,
 up/down shifts the pitch, and both persist as offsets so the correction sticks
 as you turn around. The compass shows how much is applied.
 
+**Staying up.** An empty viewfinder is the failure this app is most exposed to,
+because everything looks the same behind it: a shader that did not link, a
+device that went away, a tile server that never answered. So nothing is allowed
+to stop the frame loop. Frames draw from the first moment — the clipmap is
+allocated before any tile is fetched, so a cold start shows a flat horizon that
+sharpens as levels land, rather than nothing until 6 MB has arrived. A frame
+that throws is counted and the next one is still requested; losing the GPU
+device re-uploads the height atlas and carries on, which matters because
+backgrounding the app to save a photo is enough to lose it. If five seconds pass
+with nothing drawn, the app says which of those it was instead of leaving a dark
+rectangle. The Check panel reports pipeline compilation, frames drawn, frame
+errors, device losses and tile progress.
+
 **Capture.** The composite is re-rendered into an offscreen target rather than
 scraped off the visible canvas — a WebGPU swap-chain texture is not reliably
 readable after presentation — then the labels are drawn on and the PNG goes
@@ -101,7 +114,7 @@ Photos app. Where sharing files is unsupported it downloads instead.
     src/app/        the app — viewer, camera feed, capture, shell
     src/preview/    the published preview build
     src/ui/         label painter, compass rose, plan view
-    tools/          data baking, codegen, bundling, shader and geometry checks
+    tools/          data baking, codegen, bundling, shader/geometry/GPU checks
 
 `src/main.ts` wires the app to the network sources; `src/preview/app.ts` wires
 the same `App` class to bundled data. That is the only difference between them.
@@ -154,7 +167,16 @@ otherwise have been a black screen on device: uniforms referenced without the
 compares it against the double-precision routines the labels and horizon test
 use. Current agreement: 0.06 m of position, 0.002 clipmap pixels at z12.
 
-What no check here can establish is that the pipeline links on a real device or
+`tools/check_gpu.mjs` runs the renderer on an actual WebGPU device — Chromium's
+SwiftShader adapter — over a synthetic ridge, and reads the pixels back. That
+covers what the other two cannot: that the pipelines link, that the passes run
+in the right order, and that something is painted. It reads render targets
+rather than taking a screenshot, because a headless browser will happily
+composite nothing while rendering correctly, and a screenshot cannot tell those
+apart. It skips rather than fails where no adapter is available, so `npm run
+check` does not depend on a GPU.
+
+What no check here can establish is performance, a vendor's driver quirks, or
 that the picture looks right. That needs a phone.
 
 ## Demo data

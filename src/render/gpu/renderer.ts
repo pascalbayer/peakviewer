@@ -17,6 +17,7 @@
 // Without it the bundle throws "Class extends value undefined" at load.
 import '@babylonjs/core/Engines/engine';
 import { Constants } from '@babylonjs/core/Engines/constants';
+import { Logger } from '@babylonjs/core/Misc/logger';
 import { ShaderStore } from '@babylonjs/core/Engines/shaderStore';
 import { WebGPUEngine } from '@babylonjs/core/Engines/webgpuEngine';
 import '@babylonjs/core/Engines/WebGPU/Extensions/engine.rawTexture';
@@ -66,7 +67,19 @@ export interface RendererDiagnostics {
   webgpu: boolean;
   engine: string;
   adapter: string;
+  /** Anything Babylon logged as an error or warning, verbatim. */
   shaderErrors: string[];
+  /** Whether each pipeline actually compiled. A shader that never becomes
+   *  ready is silently skipped by Babylon, which looks like a blank screen. */
+  terrainReady: boolean;
+  compositeReady: boolean;
+  framesDrawn: number;
+  /** How often the GPU device has gone away. Backgrounding an AR app to save a
+   *  photo is enough to cause it, so this is expected to be non-zero in use. */
+  deviceLost: number;
+  /** Frames that threw, and the first message. */
+  frameErrors: number;
+  lastError: string;
   levels: number;
   atlas: string;
   vertices: number;
@@ -106,6 +119,8 @@ export class GpuRenderer {
 
   readonly diagnostics: RendererDiagnostics = {
     webgpu: false, engine: '', adapter: '', shaderErrors: [],
+    terrainReady: false, compositeReady: false, framesDrawn: 0,
+    deviceLost: 0, frameErrors: 0, lastError: '',
     levels: 0, atlas: '', vertices: 0, sectorsDrawn: 0, frameMs: 0, size: '',
   };
 
@@ -155,6 +170,11 @@ export class GpuRenderer {
   }
 
   private async init() {
+    // Babylon reports a failed shader by logging and then quietly refusing to
+    // draw the mesh, which on screen is indistinguishable from an empty scene.
+    // Capture everything it says so the Check panel can show the real reason.
+    this.captureLogs();
+
     ShaderStore.ShadersStoreWGSL.terrainVertexShader = TERRAIN_VERTEX;
     ShaderStore.ShadersStoreWGSL.terrainFragmentShader = TERRAIN_FRAGMENT;
     ShaderStore.ShadersStoreWGSL.compositeVertexShader = COMPOSITE_VERTEX;
@@ -194,11 +214,48 @@ export class GpuRenderer {
     this.buildComposite();
     this.buildSectors();
 
-    // Babylon reports WGSL problems through the engine's observable; keep them
-    // so the app can show the actual message instead of a black screen.
+    // Losing the device is normal on a phone: backgrounding the app to save a
+    // photo, or a driver reset under thermal load, is enough. Babylon rebuilds
+    // its own resources, but the height atlas is ours — it has to be re-sent or
+    // the terrain comes back empty, which reads as a silent failure.
     this.engine.onContextLostObservable.add(() => {
-      d.shaderErrors.push('WebGPU device lost');
+      d.deviceLost++;
+      d.shaderErrors.push(`WebGPU device lost (${d.deviceLost})`);
     });
+    this.engine.onContextRestoredObservable.add(() => {
+      this.atlas?.dispose();
+      this.atlas = null;
+      this.uploaded = this.uploaded.map(() => -1);
+      if (this.heightField) this.setHeightField(this.heightField);
+    });
+  }
+
+  private captureLogs() {
+    const d = this.diagnostics;
+    const keep = (prefix: string) => (msg: string) => {
+      const text = `${prefix}${typeof msg === 'string' ? msg : String(msg)}`;
+      if (!d.shaderErrors.includes(text)) d.shaderErrors.push(text);
+      if (d.shaderErrors.length > 40) d.shaderErrors.shift();
+    };
+    const origError = Logger.Error;
+    const origWarn = Logger.Warn;
+    Logger.Error = (m: string | any[], limit?: number) => { keep('')(String(m)); origError(m, limit); };
+    Logger.Warn = (m: string | any[], limit?: number) => { keep('warn: ')(String(m)); origWarn(m, limit); };
+  }
+
+  /** Did each pipeline actually compile? Recorded every frame. */
+  private pollShaders() {
+    const d = this.diagnostics;
+    for (const [name, mat] of [['terrain', this.terrainMat], ['composite', this.compositeMat]] as const) {
+      const effect = mat?.getEffect?.();
+      const ready = !!mat && mat.isReady(name === 'composite' ? this.quad : this.sectors[0]);
+      if (name === 'terrain') d.terrainReady = ready; else d.compositeReady = ready;
+      const err = effect?.getCompilationError?.();
+      if (err) {
+        const text = `${name} shader: ${err}`;
+        if (!d.shaderErrors.includes(text)) d.shaderErrors.push(text);
+      }
+    }
   }
 
   // ------------------------------------------------------------------ passes
@@ -253,7 +310,10 @@ export class GpuRenderer {
     this.quad.layerMask = VIEW_MASK;
     this.quad.alwaysSelectAsActiveMesh = true;
     this.quad.isPickable = false;
-    this.quad.infiniteDistance = true;
+    this.quad.doNotSyncBoundingInfo = true;
+    // No infiniteDistance: the vertex shader already emits clip-space
+    // positions, and that flag has Babylon fit a camera-following world matrix
+    // the quad neither needs nor wants.
   }
 
   /**
@@ -438,11 +498,25 @@ export class GpuRenderer {
   render() {
     if (this.disposed || !this.heightField) return;
     const t0 = performance.now();
-    const { w, h } = this.resize();
-    this.camera.update();
-    this.updateTerrainUniforms();
-    this.updateCompositeUniforms(w, h);
-    this.scene.render();
+    try {
+      const { w, h } = this.resize();
+      this.camera.update();
+      this.updateTerrainUniforms();
+      this.updateCompositeUniforms(w, h);
+      this.scene.render();
+      this.pollShaders();
+      this.diagnostics.framesDrawn++;
+    } catch (e) {
+      // A frame that throws must not take the app with it. Losing the device
+      // mid-frame is the common cause and Babylon recovers from it a frame or
+      // two later; the caller keeps asking for frames and this keeps a record
+      // of what went wrong so the Check panel can show it.
+      const d = this.diagnostics;
+      d.frameErrors++;
+      const msg = e instanceof Error ? e.message : String(e);
+      if (!d.lastError) d.lastError = msg;
+      if (!d.shaderErrors.includes(`frame: ${msg}`)) d.shaderErrors.push(`frame: ${msg}`);
+    }
     const dt = performance.now() - t0;
     this.frameTimes.push(dt);
     if (this.frameTimes.length > 30) this.frameTimes.shift();
@@ -512,6 +586,19 @@ export class GpuRenderer {
       else sx = canvasAspect / videoAspect;
     }
     m.setVector2('uVideoScale', new Vector2(sx, sy));
+  }
+
+  /**
+   * The range buffer, read back. Only the checks use this — it stalls the
+   * pipeline — but "did the terrain pass write anything?" is otherwise
+   * unanswerable from outside, and it is the first question worth asking when
+   * the screen is empty.
+   */
+  async readRange(): Promise<CaptureResult | null> {
+    const { width, height } = this.rangeRtt.getSize();
+    const data = await this.rangeRtt.readPixels();
+    if (!data) return null;
+    return { width, height, pixels: new Uint8Array(data.buffer, data.byteOffset, data.byteLength) };
   }
 
   /** Renders the composite once more into a buffer and reads it back. */

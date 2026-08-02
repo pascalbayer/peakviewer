@@ -212,14 +212,36 @@ export class App {
   }
 
   /** Shows a blocking notice in the viewfinder; the rest of the UI stays live. */
-  showRendererError(text: string) {
+  showRendererError(text: string, title = 'The renderer could not start') {
+    this.stopped = true;
     this.stage.append(el('div', { class: 'stopper' },
-      el('h3', {}, 'The renderer could not start'),
+      el('h3', {}, title),
       el('pre', {}, text),
       el('p', {}, 'Everything else on this page still works — the access card '
-        + 'and the panels below are live — but there is nothing to draw the '
-        + 'skyline with until WebGPU is available.')));
+        + 'and the panels below are live. The Check panel has the full detail.')));
     void this.showGate(true);
+  }
+
+  /**
+   * An empty viewfinder is ambiguous: it looks the same whether the renderer
+   * failed, the shaders never linked, or the app simply has nothing to draw
+   * yet. Nothing on screen after a few seconds means one of the first two, so
+   * stop guessing and report which.
+   */
+  private watchdog() {
+    setTimeout(() => {
+      const d = this.viewer?.renderer.diagnostics;
+      if (!d || this.stopped) return;
+      if (d.framesDrawn > 0 && d.compositeReady) return;
+      const why = !d.compositeReady
+        ? 'The composite shader never finished compiling, so Babylon skipped '
+          + 'drawing it. Anything the device said about it is below.'
+        : 'No frame has completed.';
+      this.showRendererError(
+        `${why}\n\n${d.shaderErrors.join('\n') || '(the engine reported nothing)'}`,
+        'Nothing is being drawn',
+      );
+    }, 5000);
   }
 
   // ------------------------------------------------------------ permissions
@@ -448,30 +470,47 @@ export class App {
     this.viewer.setHeightField(this.streamer.heightField);
     this.streamer.onUpdate = () => {
       this.viewer.refreshHeights();
+      this.applyAltitude(this.streamer.heightField.lon, this.streamer.heightField.lat);
       this.viewer.rebuildTargets();
     };
 
-    await this.relocate(this.sources.home.lon, this.sources.home.lat);
     this.viewer.camera.set({ yaw: 0, pitch: 0, fov: 46 });
+    // Draw and ask before fetching anything. A cold start pulls ~64 tiles, and
+    // waiting for them would leave the viewfinder blank for as long as the
+    // network takes — indistinguishable from a crash, and permanent if the
+    // tiles never arrive at all. The clipmap is already allocated, so frames
+    // are drawable now and the terrain sharpens as levels land.
     this.loop();
+    this.watchdog();
     // Nothing is requested behind the user's back: the gate explains what each
     // permission is for and does the asking from their tap, which is also the
     // only way iOS will hand over the motion sensors.
     void this.showGate(false);
+    void this.relocate(this.sources.home.lon, this.sources.home.lat);
   }
 
   private async relocate(lon: number, lat: number) {
     const hf = this.streamer.heightField;
     const moved = groundRange(hf.lon, hf.lat, lon, lat);
+    // Position first: the pose, the eye height and the summit query all depend
+    // on where we are, not on whether the terrain under us has downloaded.
+    this.pose.lon = lon;
+    this.pose.lat = lat;
+    this.applyAltitude(lon, lat);
+    void this.loadPeaks(lon, lat);
     if (!this.filled || moved > 30) {
-      await this.streamer.setCenter(lon, lat);
-      this.filled = true;
+      try {
+        await this.streamer.setCenter(lon, lat);
+        this.filled = true;
+      } catch (e) {
+        // Losing the tile source is survivable — whatever is cached still
+        // draws — so say so in the status line rather than stopping.
+        this.note = `terrain: ${e instanceof Error ? e.message : String(e)}`;
+        return;
+      }
     }
     this.viewer?.refreshHeights();
     this.applyAltitude(lon, lat);
-    this.pose.lon = lon;
-    this.pose.lat = lat;
-    void this.loadPeaks(lon, lat);
   }
 
   /**
@@ -680,6 +719,15 @@ export class App {
       ['WebGPU', webgpuAvailable() ? 'present' : 'missing'],
       ['Engine', d?.engine ?? '—'],
       ['Adapter', d?.adapter ?? '—'],
+      // The first four questions to ask about a blank screen, in order.
+      ['Terrain shader', d ? (d.terrainReady ? 'compiled' : 'NOT READY') : '—'],
+      ['Outline shader', d ? (d.compositeReady ? 'compiled' : 'NOT READY') : '—'],
+      ['Frames drawn', (d?.framesDrawn ?? 0).toLocaleString()],
+      ['Frame errors', d?.frameErrors
+        ? `${d.frameErrors} — ${d.lastError}` : String(d?.frameErrors ?? 0)],
+      ['Device lost', String(d?.deviceLost ?? 0)],
+      ['Terrain tiles', `${this.streamer.progress.done}/${this.streamer.progress.total || 0}`
+        + ` (${this.streamer.progress.levelsReady} levels ready)`],
       ['Clipmap levels', String(d?.levels ?? 0)],
       ['Height atlas', d?.atlas ?? '—'],
       ['Mesh vertices', (d?.vertices ?? 0).toLocaleString()],
@@ -771,18 +819,53 @@ export class App {
 
   // ------------------------------------------------------------------- loop
 
+  /**
+   * One frame. Nothing in here may stop the loop: an exception that escaped
+   * would skip the next requestAnimationFrame and freeze the app on whatever
+   * was last drawn — on the first frame, that is an empty viewfinder and no way
+   * to tell it from a dead renderer. Device loss alone is enough to trigger it,
+   * and a phone loses the device whenever the app goes to the background.
+   */
   private loop = () => {
     if (!this.viewer) return;
-    const cam = this.viewer.camera;
-    this.viewer.render();
-    this.drawRibbon(cam.yaw, cam.hfov);
-    const off = this.pose.status.offset;
-    this.rose.draw(cam.yaw, off, { warn: Math.abs(((off + 180) % 360) - 180) > 8 });
-    this.drawStatus();
-    if (this.panels.Camera && !this.panels.Camera.classList.contains('hidden')
-      && !this.panels.Camera.childElementCount) this.refreshCameraPanel();
+    try {
+      const cam = this.viewer.camera;
+      this.viewer.render();
+      this.drawRibbon(cam.yaw, cam.hfov);
+      const off = this.pose.status.offset;
+      this.rose.draw(cam.yaw, off, { warn: Math.abs(((off + 180) % 360) - 180) > 8 });
+      this.drawStatus();
+      if (this.panels.Camera && !this.panels.Camera.classList.contains('hidden')
+        && !this.panels.Camera.childElementCount) this.refreshCameraPanel();
+      this.loopErrors = 0;
+    } catch (e) {
+      this.onFrameError(e);
+    }
     requestAnimationFrame(this.loop);
   };
+
+  private loopErrors = 0;
+  private stopped = false;
+
+  /**
+   * Frames are allowed to fail. A run of them is a different matter: something
+   * is wrong that will not fix itself, and spinning silently at 60 Hz is the
+   * worst of both worlds. Give up drawing and say what happened.
+   */
+  private onFrameError(e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    const d = this.viewer?.renderer.diagnostics;
+    if (d) {
+      d.frameErrors++;
+      if (!d.lastError) d.lastError = msg;
+      if (!d.shaderErrors.includes(`loop: ${msg}`)) d.shaderErrors.push(`loop: ${msg}`);
+    }
+    this.note = `render error: ${msg}`;
+    if (++this.loopErrors === 120 && !this.stopped) {
+      this.stopped = true;
+      this.showRendererError(`${msg}\n\nThe last 120 frames all failed the same way.`);
+    }
+  }
 
   private drawStatus() {
     const v = this.viewer;
