@@ -2,6 +2,17 @@
   "name": "peakviewer",
   "version": "0.1.0",
   "description": "Mobile PWA peak finder: on-device DEM, GPU horizon rendering, sensor-based AR labelling.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pascalbayer/peakviewer.git"
+  },
+  "homepage": "https://pascalbayer.github.io/peakviewer/",
+  "bugs": {
+    "url": "https://github.com/pascalbayer/peakviewer/issues"
+  },
   "scripts": {
     "gen:region": "node tools/gen_region.mjs data/gornergrat.json src/data/generated-gornergrat.ts",
     "typecheck": "tsc --noEmit",
@@ -14,24 +25,14 @@
     "check": "tsc --noEmit && npm run check:shaders",
     "build:pages": "npm run check && npm run gen:region && node tools/build_app.mjs docs && node tools/build_preview.mjs app && node tools/copy_demo.mjs && node tools/gen_notices.mjs"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/pascalbayer/peakviewer.git"
+  "dependencies": {
+    "@babylonjs/core": "^9.19.0",
+    "geomagnetism": "^0.2.0"
   },
   "devDependencies": {
     "esbuild": "^0.28.1",
     "playwright": "^1.62.1",
     "typescript": "^7.0.2",
     "wgsl_reflect": "^1.5.0"
-  },
-  "private": true,
-  "type": "module",
-  "dependencies": {
-    "@babylonjs/core": "^9.19.0",
-    "geomagnetism": "^0.2.0"
-  },
-  "homepage": "https://pascalbayer.github.io/peakviewer/",
-  "bugs": {
-    "url": "https://github.com/pascalbayer/peakviewer/issues"
   }
 }
