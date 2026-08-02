@@ -1,0 +1,5 @@
+node_modules/
+dist/
+src/data/generated-*.ts
+*.npy
+.DS_Store

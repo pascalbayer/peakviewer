@@ -1,0 +1,22 @@
+{
+  "name": "peakviewer",
+  "version": "0.1.0",
+  "description": "Mobile PWA peak finder: on-device DEM, GPU horizon rendering, sensor-based AR labelling.",
+  "scripts": {
+    "gen:region": "node tools/gen_region.mjs data/gornergrat.json src/data/generated-gornergrat.ts",
+    "typecheck": "tsc --noEmit",
+    "build:preview": "node tools/build_preview.mjs",
+    "preview": "npm run gen:region && node tools/build_preview.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://local_proxy@127.0.0.1:41729/git/pascalbayer/peakviewer"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.1",
+    "playwright": "^1.62.1",
+    "typescript": "^7.0.2"
+  },
+  "private": true,
+  "type": "module"
+}

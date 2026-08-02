@@ -1,0 +1,12 @@
+[
+  { "id": "gornergrat", "name": "Gornergrat", "lon": 7.78472, "lat": 45.98333, "eye": 1.7, "yaw": 262,
+    "note": "Railway terminus above Zermatt. Matterhorn to the west, Monte Rosa to the south-east." },
+  { "id": "zermatt", "name": "Zermatt village", "lon": 7.74910, "lat": 46.02070, "eye": 1.7, "yaw": 200,
+    "note": "Valley floor — most of the panorama is blocked by the near ridges." },
+  { "id": "riffelberg", "name": "Riffelberg", "lon": 7.76050, "lat": 45.99260, "eye": 1.7, "yaw": 250 },
+  { "id": "kleinmatterhorn", "name": "Klein Matterhorn", "lon": 7.72940, "lat": 45.93860, "eye": 1.7, "yaw": 340,
+    "note": "Highest lift station in the Alps — the long-range view that stresses curvature and refraction." },
+  { "id": "unterrothorn", "name": "Unterrothorn", "lon": 7.77280, "lat": 46.01140, "eye": 1.7, "yaw": 215 },
+  { "id": "schwarzsee", "name": "Schwarzsee", "lon": 7.70510, "lat": 45.97110, "eye": 1.7, "yaw": 30,
+    "note": "Directly under the Matterhorn's east face." }
+]

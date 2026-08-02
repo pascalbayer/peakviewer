@@ -1,0 +1,87 @@
+{
+ "name": "gornergrat",
+ "origin": {
+  "lon": 7.7845,
+  "lat": 45.9835
+ },
+ "rings": [
+  {
+   "z": 12,
+   "px0": 546642,
+   "py0": 372792,
+   "w": 641,
+   "h": 641,
+   "res": 26.556726810627882,
+   "halfKm": 8.5,
+   "quant": 1,
+   "bias": -1000,
+   "hi": "gornergrat_r0_hi.png",
+   "lo": "gornergrat_r0_lo.png"
+  },
+  {
+   "z": 11,
+   "px0": 273161,
+   "py0": 186236,
+   "w": 641,
+   "h": 641,
+   "res": 53.113453621255765,
+   "halfKm": 17.0,
+   "quant": 1,
+   "bias": -1000,
+   "hi": "gornergrat_r1_hi.png",
+   "lo": "gornergrat_r1_lo.png"
+  },
+  {
+   "z": 10,
+   "px0": 136420,
+   "py0": 92958,
+   "w": 641,
+   "h": 641,
+   "res": 106.22690724251153,
+   "halfKm": 34.0,
+   "quant": 2,
+   "bias": -2000,
+   "hi": "gornergrat_r2_hi.png",
+   "lo": "gornergrat_r2_lo.png"
+  },
+  {
+   "z": 9,
+   "px0": 68050,
+   "py0": 46319,
+   "w": 641,
+   "h": 641,
+   "res": 212.45381448502306,
+   "halfKm": 68.0,
+   "quant": 2,
+   "bias": -2000,
+   "hi": "gornergrat_r3_hi.png",
+   "lo": "gornergrat_r3_lo.png"
+  },
+  {
+   "z": 8,
+   "px0": 33865,
+   "py0": 23000,
+   "w": 641,
+   "h": 641,
+   "res": 424.9076289700461,
+   "halfKm": 136.0,
+   "quant": 4,
+   "bias": -4000,
+   "hi": "gornergrat_r4_hi.png",
+   "lo": "gornergrat_r4_lo.png"
+  },
+  {
+   "z": 7,
+   "px0": 16773,
+   "py0": 11340,
+   "w": 641,
+   "h": 641,
+   "res": 849.8152579400922,
+   "halfKm": 272.0,
+   "quant": 4,
+   "bias": -4000,
+   "hi": "gornergrat_r5_hi.png",
+   "lo": "gornergrat_r5_lo.png"
+  }
+ ]
+}
