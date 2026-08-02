@@ -50,7 +50,13 @@ async function boot() {
     msg.textContent = 'starting WebGPU…';
     bar.style.width = '40%';
     const app = new App(document.body, sources);
-    await app.start();
+    try {
+      await app.start();
+    } catch (e) {
+      // Keep the shell: the access card and the requirements are still useful
+      // even when the renderer will not start on this device.
+      app.showRendererError(e instanceof Error ? e.message : String(e));
+    }
     bar.style.width = '100%';
     boot0.style.opacity = '0';
     setTimeout(() => boot0.remove(), 400);

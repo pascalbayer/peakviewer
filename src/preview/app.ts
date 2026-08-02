@@ -60,14 +60,23 @@ async function boot() {
     msg.textContent = 'starting WebGPU…';
     bar.style.width = '75%';
     const app = new App(document.body, sources);
-    await app.start();
-    app.viewer.camera.set({ yaw: home.yaw ?? 0, pitch: 0 });
     addPlaces(app, sources);
+    (window as unknown as Record<string, unknown>).peak = { app };
+
+    try {
+      await app.start();
+      app.viewer.camera.set({ yaw: home.yaw ?? 0, pitch: 0 });
+      (window as unknown as Record<string, unknown>).peak = { app, viewer: app.viewer };
+    } catch (e) {
+      // The renderer is the one part that can fail on an otherwise fine device.
+      // Keep the shell up so the message, the access card and the notes on what
+      // the app needs are all still reachable, rather than dying on a splash.
+      app.showRendererError(e instanceof Error ? e.message : String(e));
+    }
 
     bar.style.width = '100%';
     splash.style.opacity = '0';
     setTimeout(() => splash.remove(), 400);
-    (window as unknown as Record<string, unknown>).peak = { app, viewer: app.viewer };
   } catch (e) {
     // Show the message plainly; the stack only helps if it is not one of the
     // expected environment failures.

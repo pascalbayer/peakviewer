@@ -49,14 +49,32 @@ export class CameraFeed {
       return false;
     }
     try {
-      this.stream = await navigator.mediaDevices.getUserMedia({
+      return await this.adopt(await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: { ideal: 'environment' },
           width: { ideal: 1920 },
           height: { ideal: 1080 },
         },
         audio: false,
-      });
+      }));
+    } catch (e) {
+      this.status.active = false;
+      this.status.error = e instanceof Error
+        ? `${e.name}: ${e.message}`
+        : 'Camera access failed.';
+      return false;
+    }
+  }
+
+  /**
+   * Takes over a stream someone else opened. The permission flow opens one as
+   * part of asking, and opening a second a moment later is both slower and, on
+   * some Android builds, a second prompt.
+   */
+  async adopt(stream: MediaStream): Promise<boolean> {
+    if (this.stream && this.stream !== stream) this.stop();
+    try {
+      this.stream = stream;
       this.video.srcObject = this.stream;
       await this.video.play();
       const track = this.stream.getVideoTracks()[0];

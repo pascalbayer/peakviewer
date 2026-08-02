@@ -15,6 +15,14 @@ fallback — Chrome or Edge 121+, or Safari 26+ on iOS 26+.
 Geolocation, motion sensors and the camera all require a secure context, so use
 `https://` or `localhost`.
 
+**Permissions.** An access card asks for camera, motion and location together,
+from a single tap — which is the only way iOS hands over the motion sensors,
+since `DeviceOrientationEvent.requestPermission` is only honoured while the page
+still has user activation. Motion is therefore requested first, before anything
+slower is awaited. The 🔓 button in the bar and the **Access** panel reopen it,
+and report per-item state plus how to undo a refusal, which no browser will
+prompt for a second time.
+
 ## How it works
 
 **Elevation.** Terrain is a heightfield, not geometry. Levels are concentric

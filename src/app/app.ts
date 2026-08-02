@@ -21,6 +21,9 @@ import { bearing, groundRange } from '../core/geodesy';
 import { ClipmapStreamer, DEFAULT_CLIPMAP } from '../sources/clipmap';
 import { TileKey, TileSource } from '../sources/types';
 import { TileStore } from '../sources/tilestore';
+import {
+  PermissionKind, PermissionReport, PermissionState, inspect, recoveryHint, requestAll,
+} from './permissions';
 import { CompassRose } from '../ui/compass';
 import { QUALITY_HIGH, QUALITY_LOW, webgpuAvailable } from '../render/gpu/renderer';
 import { el } from '../ui/dom';
@@ -62,6 +65,9 @@ export class App {
   private ribbon: HTMLCanvasElement;
   private hint: HTMLDivElement;
   private shutter: HTMLButtonElement;
+  private gate: HTMLDivElement;
+  private perms: PermissionReport | null = null;
+  private asking = false;
 
   private followSensors = false;
   private filled = false;
@@ -77,11 +83,12 @@ export class App {
     this.statusBar = el('div', { class: 'status' });
     this.card = el('div', { class: 'card hidden' });
     this.hint = el('div', { class: 'hint' }, 'drag to line the outline up');
+    this.gate = el('div', { class: 'gate hidden' });
     this.stage = el('div', { class: 'stage' },
       this.feed.video, this.canvas,
       el('div', { class: 'ovl' }, this.ribbon, this.overlay, this.statusBar,
         this.rose.canvas, this.hint),
-      this.card);
+      this.card, this.gate);
 
     this.streamer = new ClipmapStreamer(sources.tiles, DEFAULT_CLIPMAP,
       sources.home.lon, sources.home.lat);
@@ -117,6 +124,7 @@ export class App {
       this.icon('⊕', 'Follow device orientation', () => void this.toggleSensors()),
     );
     const right = el('div', { class: 'actions' },
+      this.icon('🔓', 'Device permissions', () => void this.showGate(true)),
       this.icon('↺', 'Reset alignment', () => {
         this.pose.setOffset(0);
         this.pitchOffset = 0;
@@ -146,6 +154,7 @@ export class App {
     if (name === 'Offline') void this.refreshOffline();
     if (name === 'Peaks') this.refreshPeakList();
     if (name === 'Check') this.refreshDiagnostics();
+    if (name === 'Access') void this.refreshAccess();
   }
 
   addPanel(name: string, node: HTMLElement) {
@@ -159,7 +168,7 @@ export class App {
 
   private buildPanels() {
     this.sheet.append(this.tabRow);
-    for (const n of ['Peaks', 'Camera', 'Offline', 'Check', 'About']) {
+    for (const n of ['Peaks', 'Camera', 'Access', 'Offline', 'Check', 'About']) {
       this.addPanel(n, el('div', {}));
     }
 
@@ -182,6 +191,154 @@ export class App {
         + "model's own ground height is shown next to it, because a phone's "
         + 'vertical fix is the weaker half of a satellite fix.'),
     );
+  }
+
+  /** Shows a blocking notice in the viewfinder; the rest of the UI stays live. */
+  showRendererError(text: string) {
+    this.stage.append(el('div', { class: 'stopper' },
+      el('h3', {}, 'The renderer could not start'),
+      el('pre', {}, text),
+      el('p', {}, 'Everything else on this page still works — the access card '
+        + 'and the panels below are live — but there is nothing to draw the '
+        + 'skyline with until WebGPU is available.')));
+    void this.showGate(true);
+  }
+
+  // ------------------------------------------------------------ permissions
+
+  /**
+   * Shows the access card. `force` opens it even when everything is already
+   * granted, so the button in the bar always does something visible.
+   */
+  async showGate(force: boolean) {
+    this.perms = await inspect();
+    const p = this.perms;
+    const allGood = p.secure
+      && p.camera === 'granted'
+      && p.location === 'granted'
+      && (p.motion === 'granted' || !p.motionNeedsRequest);
+    if (allGood && !force) { this.gate.classList.add('hidden'); return; }
+
+    this.renderGate();
+    this.gate.classList.remove('hidden');
+  }
+
+  private renderGate() {
+    const p = this.perms;
+    if (!p) return;
+    const rows: [PermissionKind, string, string][] = [
+      ['camera', 'Camera', 'The view behind the outline, and what the shutter saves.'],
+      ['motion', 'Motion & orientation', 'Which way you are pointing, so the skyline follows you.'],
+      ['location', 'Location', 'Where you are standing, and how high — the whole view depends on it.'],
+    ];
+
+    this.gate.textContent = '';
+    this.gate.append(
+      el('h2', {}, 'Let the app see where you are'),
+      el('p', {}, 'Three permissions, asked once. Nothing is sent anywhere: the '
+        + 'elevation model runs on the device and the photos stay on it.'),
+    );
+
+    const list = el('div', { class: 'gate-list' });
+    for (const [kind, title, why] of rows) {
+      const state = p[kind];
+      const skip = kind === 'motion' && !p.motionNeedsRequest && state === 'granted';
+      list.append(el('div', { class: `gate-row ${state}` },
+        el('div', { class: 'gate-mark' }, mark(state)),
+        el('div', {},
+          el('b', {}, title),
+          el('span', {}, skip ? 'Available without a prompt on this device.' : why),
+          ...(state === 'denied'
+            ? [el('em', {}, recoveryHint(kind))]
+            : []))));
+    }
+    this.gate.append(list);
+
+    if (!p.secure) {
+      this.gate.append(el('p', { class: 'gate-warn' },
+        'This page is not on a secure origin, so the browser will refuse all '
+        + 'three whatever you choose here. Open it over https.'));
+    }
+
+    const ask = el('button', {
+      class: 'chip on gate-go', type: 'button',
+      ...(this.asking ? { disabled: true } : {}),
+      onclick: () => void this.runRequest(),
+    }, this.asking ? 'Asking…' : 'Allow access');
+
+    this.gate.append(el('div', { class: 'gate-actions' },
+      ask,
+      el('button', {
+        class: 'chip', type: 'button',
+        onclick: () => this.gate.classList.add('hidden'),
+      }, 'Not now')));
+
+    this.gate.append(el('p', { class: 'gate-fine' },
+      'The browser will only ask once. If you refuse, the app keeps working '
+      + 'with whatever is left — you can still drag the view by hand — but the '
+      + 'prompts will not come back without changing the site settings.'));
+  }
+
+  /** Runs the whole request from this tap. Order matters; see permissions.ts. */
+  private async runRequest() {
+    if (this.asking) return;
+    this.asking = true;
+    this.renderGate();
+    try {
+      const res = await requestAll({
+        skipCamera: this.feed.status.active,
+        onProgress: (kind, state) => {
+          if (this.perms) { this.perms[kind] = state; this.renderGate(); }
+        },
+      });
+      this.perms = res;
+
+      if (res.stream) {
+        await this.feed.adopt(res.stream);
+        this.viewer?.renderer.attachVideo(this.feed.video);
+        if (this.viewer) {
+          this.viewer.camera.fov = this.feed.renderFovY(
+            this.stage.clientWidth, this.stage.clientHeight);
+        }
+      }
+      if (res.motion === 'granted' && !this.followSensors) {
+        this.followSensors = true;
+        this.pose.start();
+      }
+      if (res.location === 'granted') this.pose.startWatch();
+
+      this.note = res.notes.length ? res.notes[0] : '';
+    } finally {
+      this.asking = false;
+      this.renderGate();
+      const p = this.perms;
+      const done = p && p.camera !== 'prompt' && p.location !== 'prompt';
+      if (done) setTimeout(() => this.gate.classList.add('hidden'), 700);
+    }
+  }
+
+  private async refreshAccess() {
+    const panel = this.panels.Access;
+    if (!panel) return;
+    const p = await inspect();
+    this.perms = p;
+    panel.textContent = '';
+    panel.append(el('h4', {}, 'Device access'));
+    const rows: [PermissionKind, string][] = [
+      ['camera', 'Camera'], ['motion', 'Motion & orientation'], ['location', 'Location'],
+    ];
+    panel.append(el('div', { class: 'card-rows' },
+      ...rows.flatMap(([k, label]) => [el('span', {}, label), el('b', {}, p[k])]),
+      el('span', {}, 'Secure origin'), el('b', {}, p.secure ? 'yes' : 'no'),
+      el('span', {}, 'Motion needs a prompt'), el('b', {}, p.motionNeedsRequest ? 'yes (iOS)' : 'no')));
+    for (const [k, label] of rows) {
+      if (p[k] === 'denied') {
+        panel.append(el('p', { class: 'muted' }, `${label}: ${recoveryHint(k)}`));
+      }
+    }
+    panel.append(el('div', { class: 'chips' }, el('button', {
+      class: 'chip on', type: 'button', onclick: () => void this.showGate(true),
+    }, 'Request access')));
   }
 
   // ------------------------------------------------------------------ input
@@ -271,8 +428,11 @@ export class App {
 
     await this.relocate(this.sources.home.lon, this.sources.home.lat);
     this.viewer.camera.set({ yaw: 0, pitch: 0, fov: 46 });
-    void this.enableCamera();
     this.loop();
+    // Nothing is requested behind the user's back: the gate explains what each
+    // permission is for and does the asking from their tap, which is also the
+    // only way iOS will hand over the motion sensors.
+    void this.showGate(false);
   }
 
   private async relocate(lon: number, lat: number) {
@@ -315,6 +475,7 @@ export class App {
 
   private async locate() {
     if (!navigator.geolocation) { this.note = 'no geolocation here'; return; }
+    if (this.perms?.location === 'denied') { void this.showGate(true); return; }
     this.note = 'locating…';
     navigator.geolocation.getCurrentPosition(
       (p) => {
@@ -331,7 +492,12 @@ export class App {
     this.followSensors = !this.followSensors;
     if (this.followSensors) {
       const ok = await this.pose.requestPermission();
-      if (!ok) { this.followSensors = false; this.note = 'motion access refused'; return; }
+      if (!ok) {
+        this.followSensors = false;
+        this.note = 'motion access refused';
+        void this.showGate(true);
+        return;
+      }
       this.pose.start();
     } else {
       this.pose.stop();
@@ -644,6 +810,10 @@ export class App {
     c.beginPath(); c.moveTo(w / 2, h - 1); c.lineTo(w / 2 - 5, h - 9); c.lineTo(w / 2 + 5, h - 9);
     c.closePath(); c.fill();
   }
+}
+
+function mark(state: PermissionState): string {
+  return state === 'granted' ? '✓' : state === 'denied' ? '✕' : '•';
 }
 
 function clamp(v: number, lo: number, hi: number): number {

@@ -220,6 +220,8 @@ export class PoseTracker {
     const mot = (window.DeviceMotionEvent ?? {}) as unknown as Req;
     try {
       if (typeof dev.requestPermission === 'function') {
+        // Must be reached from a user gesture; see app/permissions.ts, which
+        // owns the full flow and the ordering rule this depends on.
         const r = await dev.requestPermission();
         this.status.permission = r === 'granted' ? 'granted' : 'denied';
         if (typeof mot.requestPermission === 'function') await mot.requestPermission();
@@ -287,6 +289,12 @@ export class PoseTracker {
       window.removeEventListener('devicemotion', onMotion as EventListener);
     });
 
+    this.startWatch();
+  }
+
+  /** Position updates on their own — the orientation listeners are separate. */
+  startWatch() {
+    if (this.watchId !== null) return;
     if (navigator.geolocation) {
       this.watchId = navigator.geolocation.watchPosition(
         (p) => {
