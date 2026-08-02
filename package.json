@@ -18,5 +18,8 @@
     "typescript": "^7.0.2"
   },
   "private": true,
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "geomagnetism": "^0.2.0"
+  }
 }
