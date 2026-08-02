@@ -101,12 +101,41 @@ is retried rather than remembered as "no peaks here".
 fix — the value is height above the WGS84 ellipsoid, and its accuracy is usually
 several times the horizontal figure — so the elevation model's own ground height
 is shown next to it in the Check panel and used whenever the device reports no
-altitude at all. Orientation is magnetometer plus gyroscope: the gyro is integrated between
-compass updates and bled back onto the compass with a 0.7 s time constant.
-Magnetic declination comes from WMM-2025 — a centred-dipole approximation is
-~16° wrong in the Alps, which is useless. The DeviceOrientation Euler sequence
-is Z-X'-Y'', degenerate at beta = 90 which is exactly how a phone is held in AR,
-so the code builds the full rotation matrix rather than trusting alpha.
+altitude at all. Magnetic declination comes from WMM-2025 — a centred-dipole
+approximation is ~16° wrong in the Alps, which is useless. The DeviceOrientation
+Euler sequence is Z-X'-Y'', degenerate at beta = 90 which is exactly how a phone
+is held in AR, so the code builds the full rotation matrix rather than trusting
+alpha.
+
+**Orientation is filtered, and sampled once per drawn frame.** Sensor events
+only record their reading; the fusion, the filtering and the redraw all happen
+in the render loop, so two sensors firing at 60 Hz apiece no longer mean 120
+rounds of work for 60 frames of display.
+
+Yaw is the gyroscope carrying the fast motion with the magnetometer pulling it
+back over a 0.7 s time constant. Only the part of the gyro's rate that is about
+*world up* is yaw: a phone held at a mountain has its screen normal pointing at
+the horizon, so rotation about that axis is roll, and integrating it as heading
+feeds in an error the compass then has to fight. Pitch and roll come from
+gravity and are filtered directly, with a one-euro filter rather than a plain
+low pass — a fixed time constant forces a choice between shimmer at rest and lag
+in motion, and an AR overlay has to lose on neither, so the cutoff opens up with
+the observed rate of change. Measured: 1.73° RMS of magnetometer noise comes out
+at 0.18°, while a 60°/s turn lags by 34 ms.
+
+The compass is also checked against the gyro before it is believed. A
+magnetometer near a chairlift pylon or a car door reads tens of degrees off in a
+step, and the giveaway is that the gyro says the phone did not move.
+Disagreement between the two puts the compass on probation for a second and a
+half, which turns a 40° magnetic swing into a 3.7° wobble. Being slow to trust
+it costs little, because the gyro covers real turning with no lag at all.
+
+One thing that is not filtering, because no filter could fix it: Android fires
+both `deviceorientationabsolute` and `deviceorientation`, and their alphas are
+measured from different norths. Taking both alternately swings the heading
+between two reference frames sixty times a second. The absolute one wins where
+it exists; iOS, which has neither that event nor a relative alpha worth having,
+is driven from `webkitCompassHeading`.
 
 **Alignment** is sensors plus what you drag in: left/right shifts the heading,
 up/down shifts the pitch, and both persist as offsets so the correction sticks
@@ -233,6 +262,13 @@ else. The fixture is deliberately hostile to the easy cue, with terrain
 brighter than the sky the way snow is, because anything separating them by
 brightness passes the flat cases and fails on a glacier.
 
+`tools/check_pose.mjs` drives the orientation filter with synthetic sensor data
+and measures the two things that pull against each other: residual jitter with
+the phone held still against a noisy magnetometer, and how far behind the truth
+it sits while being swung at 60°/s. It also pins the failures that are not noise
+and that no filter would fix — alternating between the two DeviceOrientation
+events, and the iOS path that has neither of them.
+
 `tools/check_gpu.mjs` runs the renderer on an actual WebGPU device — Chromium's
 SwiftShader adapter — over a synthetic ridge, and reads the pixels back. That
 covers what the other two cannot: that the pipelines link, that the passes run
@@ -303,9 +339,11 @@ reasonably look, not only in a repository. The app therefore carries a
 ## Known limits
 
 - **Alignment drift** is the main failure mode. Magnetometers are disturbed by
-  ski lifts, cars and phone cases. The ⌖ button will usually fix the heading
-  outright when there is a skyline to match; failing that, drag, and the
-  compass dot shows how much correction is applied.
+  ski lifts, cars and phone cases — the filter rides out a brief swing, but a
+  sustained one is eventually believed, because a filter that never yields
+  could not follow a real turn either. The ⌖ button will usually fix the
+  heading outright when there is a skyline to match; failing that, drag, and
+  the compass dot shows how much correction is applied.
 - **DEM resolution** rounds sharp summits off. The Matterhorn reads 4355 m
   against a catalogued 4478 m, and no zoom level fixes it because the source
   data is ~30 m. The label card shows the deficit rather than hiding it.

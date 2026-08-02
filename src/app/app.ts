@@ -924,6 +924,11 @@ export class App {
     if (!this.viewer) return;
     try {
       const cam = this.viewer.camera;
+      // Sensors are sampled here rather than in their own listeners: the
+      // filtering and the fusion happen once per drawn frame instead of once
+      // per event, and two 60 Hz sensors no longer mean 120 rounds of work for
+      // 60 frames of display.
+      this.pose.sample();
       this.viewer.render();
       this.drawRibbon(cam.yaw, cam.hfov);
       const off = this.pose.status.offset;

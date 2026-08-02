@@ -78,6 +78,69 @@ export function angleDelta(a: number, b: number): number {
 }
 
 /**
+ * A one-euro filter over an angle.
+ *
+ * Plain exponential smoothing forces a single choice between jitter at rest and
+ * lag in motion, and an AR overlay needs to lose on neither: a still phone must
+ * not shimmer, and a phone being swung to a new peak must not trail behind the
+ * view. So the cutoff rises with the observed rate of change — heavy smoothing
+ * while the signal is basically still, progressively less as it genuinely moves.
+ *
+ * Everything is done through `angleDelta`, so the filter is unaware of the seam
+ * at 0/360 and cannot produce the full-circle spin that filtering raw bearings
+ * gives you when the user happens to be facing north.
+ */
+export class AngleFilter {
+  private value = NaN;
+  private rate = 0;
+
+  /**
+   * @param minCutoff Hz. Lower is smoother when still.
+   * @param beta      How fast the cutoff opens up with motion.
+   * @param rateCutoff Hz, the smoothing on the rate estimate itself.
+   */
+  constructor(public minCutoff = 1.0, public beta = 0.03, public rateCutoff = 1.0) {}
+
+  reset(to = NaN) {
+    this.value = Number.isFinite(to) ? norm180(to) : NaN;
+    this.rate = 0;
+  }
+
+  get current(): number { return this.value; }
+
+  /**
+   * Results come back in (-180, 180]. Pitch and roll are signed quantities and
+   * a filter that handed back 350° for ten degrees below the horizon would be
+   * clamped to the opposite end of its range by everything downstream.
+   */
+  filter(target: number, dt: number): number {
+    if (!Number.isFinite(this.value)) { this.value = norm180(target); return this.value; }
+    if (dt <= 0) return this.value;
+    const step = angleDelta(target, this.value);
+    this.rate += smoothing(this.rateCutoff, dt) * (step / dt - this.rate);
+    const cutoff = this.minCutoff + this.beta * Math.abs(this.rate);
+    this.value = norm180(this.value + step * smoothing(cutoff, dt));
+    return this.value;
+  }
+}
+
+/** Exponential weight for a first-order low pass at `cutoff` Hz over `dt` s. */
+function smoothing(cutoff: number, dt: number): number {
+  const tau = 1 / (2 * Math.PI * cutoff);
+  return 1 / (1 + tau / dt);
+}
+
+/** To [0, 360). */
+function wrap(deg: number): number {
+  return ((deg % 360) + 360) % 360;
+}
+
+/** To (-180, 180]. */
+function norm180(deg: number): number {
+  return ((deg + 540) % 360) - 180;
+}
+
+/**
  * Device Euler angles to a view direction.
  *
  * The DeviceOrientation frame is east/north/up and the rotation is the
@@ -86,9 +149,22 @@ export function angleDelta(a: number, b: number): number {
  * the user sees, so the horizon does not tip over when the phone is turned to
  * landscape.
  */
+export interface DeviceFrame extends Orientation {
+  /**
+   * Vertical components of the device's x, y and z axes.
+   *
+   * Dotted with a device-frame angular rate this gives the rate about *world*
+   * up, which is the only part of it that is yaw. It matters because a phone
+   * held up at a mountain has its screen normal pointing at the horizon, not at
+   * the sky: rotation about that axis is roll, and integrating it as yaw feeds
+   * in an error the compass then has to fight.
+   */
+  upRow: [number, number, number];
+}
+
 export function orientationFromEuler(
   alpha: number, beta: number, gamma: number, screenAngle = 0,
-): Orientation {
+): DeviceFrame {
   const a = alpha * DEG, b = beta * DEG, g = gamma * DEG;
   const cA = Math.cos(a), sA = Math.sin(a);
   const cB = Math.cos(b), sB = Math.sin(b);
@@ -126,7 +202,7 @@ export function orientationFromEuler(
   const roll = Math.atan2(ux * nrX + uy * nrY + uz * nrZ,
     ux * nuX + uy * nuY + uz * nuZ) * RAD;
 
-  return { yaw, pitch, roll };
+  return { yaw, pitch, roll, upRow: [m31, m32, m33] };
 }
 
 export interface PoseOptions {
@@ -161,9 +237,27 @@ export class PoseTracker {
   fusionTau = 0.7;
   /** Off only for demonstrating what declination is worth. */
   applyDeclination = true;
+  /**
+   * Above this rate the compass is treated as disturbed and its pull is eased
+   * off, degrees per second. A magnetometer near a chairlift or a car door
+   * swings tens of degrees in a step; the gyro is right about that interval and
+   * the compass is not.
+   */
+  disturbedRate = 90;
+  /** How long a detected disturbance keeps the compass on probation, s. */
+  distrustTau = 1.5;
 
-  private absolute: Orientation | null = null;
-  private lastGyro = 0;
+  private target: DeviceFrame | null = null;
+  private gyro: { x: number; y: number; z: number } | null = null;
+  private yawStarted = false;
+  private pitchFilter = new AngleFilter(1.0, 0.03);
+  private rollFilter = new AngleFilter(1.2, 0.03);
+  private compassFilter = new AngleFilter(0.6, 0.02);
+  private lastCompass: number | null = null;
+  private distrust = 0;
+  /** True once deviceorientationabsolute has fired; the relative twin is then ignored. */
+  private sawAbsolute = false;
+  private lastSample = 0;
   private lastFix = 0;
   private watchId: number | null = null;
   private detach: (() => void)[] = [];
@@ -192,22 +286,139 @@ export class PoseTracker {
   /** Feeds simulated Euler angles through the same path as a real device. */
   feedSimulated(alpha: number, beta: number, gamma: number, screenAngle = 0) {
     this.status.source = 'simulated';
-    this.status.hasOrientation = true;
-    this.status.headingIsTrue = false;
-    // A real magnetometer reports magnetic north, so the simulated alpha does
-    // too — otherwise the declination step would never be exercised.
-    this.applyAbsolute(orientationFromEuler(alpha, beta, gamma, screenAngle), true);
-    this.absolute = null;               // simulation is exact; no fusion needed
+    this.feedOrientation(alpha, beta, gamma, screenAngle);
   }
 
-  private applyAbsolute(o: Orientation, magnetic: boolean) {
+  /**
+   * Records a reading. Deliberately does no work beyond the Euler conversion:
+   * these arrive at up to 60 Hz and there is no point filtering, fusing or
+   * redrawing faster than the display, so everything else happens in `sample`.
+   */
+  feedOrientation(alpha: number, beta: number, gamma: number, screenAngle = 0) {
+    this.status.hasOrientation = true;
+    const o = orientationFromEuler(alpha, beta, gamma, screenAngle);
     this.status.magneticYaw = o.yaw;
-    const decl = magnetic && !this.status.headingIsTrue && this.applyDeclination
-      ? this.status.declination : 0;
-    this.orientation.yaw = (o.yaw + decl + this.status.offset + 720) % 360;
-    this.orientation.pitch = o.pitch;
-    this.orientation.roll = o.roll;
-    this.opt.onOrientation?.(this.orientation);
+    this.target = o;
+  }
+
+  /** Records the latest angular rate, in the device frame, degrees per second. */
+  feedGyro(aboutX: number, aboutY: number, aboutZ: number) {
+    this.status.hasGyro = true;
+    this.gyro = { x: aboutX, y: aboutY, z: aboutZ };
+  }
+
+  /**
+   * The DeviceOrientation event path, minus the DOM.
+   *
+   * Public because the decision it makes — which of the two orientation events
+   * to believe — is not a detail. Android fires both, and their alphas are
+   * measured from different places: `deviceorientationabsolute` from magnetic
+   * north, plain `deviceorientation` from wherever the page happened to start.
+   * Taking both alternately swings the heading between two reference frames
+   * sixty times a second, which is not noise and no amount of filtering will
+   * rescue it.
+   */
+  handleOrientation(e: {
+    alpha: number | null; beta: number | null; gamma: number | null; absolute?: boolean;
+    webkitCompassHeading?: number; webkitCompassAccuracy?: number;
+  }, fromAbsolute: boolean, screen = 0) {
+    if (e.alpha === null || e.beta === null || e.gamma === null) return;
+    if (fromAbsolute) this.sawAbsolute = true;
+    else if (this.sawAbsolute) return;
+
+    let alpha = e.alpha;
+    if (typeof e.webkitCompassHeading === 'number') {
+      // iOS reports a true-north heading directly, and its alpha runs the other
+      // way; take the heading and skip the declination correction.
+      this.status.headingIsTrue = true;
+      this.status.compassAccuracy = e.webkitCompassAccuracy ?? null;
+      alpha = 360 - e.webkitCompassHeading;
+    } else {
+      this.status.headingIsTrue = fromAbsolute || e.absolute === true;
+    }
+    this.feedOrientation(alpha, e.beta, e.gamma, screen);
+  }
+
+  /**
+   * Advances the fused orientation by `dt` seconds and returns it.
+   *
+   * Call this once per rendered frame. Sensor events only ever record their
+   * reading; the fusion, the filtering and the callback all happen here, which
+   * is what keeps a device firing `deviceorientation` and `devicemotion` at
+   * 60 Hz apiece from doing 120 rounds of work for 60 frames of display.
+   *
+   * Yaw is the gyro carrying the fast motion with the compass pulling it back;
+   * pitch and roll come from gravity, which is quiet enough to filter directly.
+   */
+  sample(now = performance.now()): Orientation {
+    const dt = this.lastSample ? Math.min(0.25, (now - this.lastSample) / 1000) : 0;
+    this.lastSample = now;
+    this.status.gpsAge = this.lastFix ? (now - this.lastFix) / 1000 : null;
+
+    const t = this.target;
+    const o = this.orientation;
+    if (!t) return o;
+    if (this.status.source === 'manual') this.status.source = 'sensors';
+
+    const decl = this.status.headingIsTrue || !this.applyDeclination
+      ? 0 : this.status.declination;
+    const compass = wrap(t.yaw + decl + this.status.offset);
+
+    if (!this.yawStarted || dt <= 0) {
+      // Nothing to fuse from yet: take the reading whole rather than easing in
+      // from an arbitrary zero, which would swing the view across the compass
+      // on the first frame.
+      this.yawStarted = true;
+      this.compassFilter.reset(compass);
+      o.yaw = compass;
+      o.pitch = this.pitchFilter.filter(t.pitch, dt || 1 / 60);
+      o.roll = this.rollFilter.filter(t.roll, dt || 1 / 60);
+      this.opt.onOrientation?.(o);
+      return o;
+    }
+
+    // The gyro's contribution is the part of its rate that is about world up.
+    // Anything else it reports is pitch or roll and is not yaw at all.
+    let turned = 0;
+    if (this.gyro) {
+      const [ux, uy, uz] = t.upRow;
+      turned = -(this.gyro.x * ux + this.gyro.y * uy + this.gyro.z * uz) * dt;
+      o.yaw = wrap(o.yaw + turned);
+    }
+
+    // Ease the compass itself before trusting it, then pull toward it. A
+    // magnetometer that is swinging is a magnetometer being lied to by
+    // something ferrous, so the harder it swings the less it is allowed to say.
+    const eased = this.compassFilter.filter(compass, dt);
+
+    // Is the compass telling the same story as the gyro? A magnetometer near a
+    // chairlift pylon or a car door reads tens of degrees off in a step, and
+    // the giveaway is that the gyro says the phone did not move. Disagreement
+    // between the two is a far better disturbance test than the compass's own
+    // swing, which cannot distinguish being lied to from being turned.
+    //
+    // Distrust decays rather than clearing, because one bad frame means the
+    // next several are suspect too. The gyro covers real turning with no lag
+    // meanwhile, so being slow to believe the compass costs very little.
+    if (this.gyro && this.lastCompass !== null) {
+      const disagree = Math.abs(angleDelta(compass, this.lastCompass) - turned) / dt;
+      const excess = Math.max(0, disagree - this.disturbedRate);
+      this.distrust = Math.max(
+        this.distrust * Math.exp(-dt / this.distrustTau),
+        Math.min(1, excess / (this.disturbedRate * 4)),
+      );
+    } else {
+      this.distrust = 0;
+    }
+    this.lastCompass = compass;
+
+    const k = (1 - Math.exp(-dt / this.fusionTau)) * (1 - this.distrust);
+    o.yaw = wrap(o.yaw + angleDelta(this.gyro ? eased : compass, o.yaw) * k);
+
+    o.pitch = this.pitchFilter.filter(t.pitch, dt);
+    o.roll = this.rollFilter.filter(t.roll, dt);
+    this.opt.onOrientation?.(o);
+    return o;
   }
 
   /**
@@ -238,54 +449,25 @@ export class PoseTracker {
   start() {
     this.stop();
 
-    const onOrient = (e: DeviceOrientationEvent) => {
-      const wk = e as DeviceOrientationEvent & { webkitCompassHeading?: number; webkitCompassAccuracy?: number };
-      if (e.alpha === null || e.beta === null || e.gamma === null) return;
-      this.status.hasOrientation = true;
-      this.status.source = 'sensors';
-
-      let alpha = e.alpha;
-      if (typeof wk.webkitCompassHeading === 'number') {
-        // iOS reports a true-north heading directly, and its alpha runs the
-        // other way; take the heading and skip the declination correction.
-        this.status.headingIsTrue = true;
-        this.status.compassAccuracy = wk.webkitCompassAccuracy ?? null;
-        alpha = 360 - wk.webkitCompassHeading;
-      } else {
-        this.status.headingIsTrue = false;
-      }
-      const o = orientationFromEuler(alpha, e.beta, e.gamma, screenAngle());
-      this.absolute = o;
-      this.applyAbsolute(o, true);
-    };
+    const onAbsolute = (e: Event) =>
+      this.handleOrientation(e as DeviceOrientationEvent, true, screenAngle());
+    const onRelative = (e: Event) =>
+      this.handleOrientation(e as DeviceOrientationEvent, false, screenAngle());
 
     const onMotion = (e: DeviceMotionEvent) => {
       const r = e.rotationRate;
       if (!r || r.alpha === null) return;
-      this.status.hasGyro = true;
-      const now = performance.now();
-      const dt = this.lastGyro ? Math.min(0.1, (now - this.lastGyro) / 1000) : 0;
-      this.lastGyro = now;
-      if (!dt || !this.absolute) return;
-
-      // Integrate the yaw rate about the screen normal for immediate response,
-      // then bleed back onto the compass so the integration cannot drift away.
-      const o = this.orientation;
-      o.yaw = (o.yaw - (r.alpha ?? 0) * dt + 720) % 360;
-      const k = 1 - Math.exp(-dt / this.fusionTau);
-      const decl = this.status.headingIsTrue || !this.applyDeclination
-        ? 0 : this.status.declination;
-      const targetYaw = (this.absolute.yaw + decl + this.status.offset + 720) % 360;
-      o.yaw = (o.yaw + angleDelta(targetYaw, o.yaw) * k + 720) % 360;
-      this.opt.onOrientation?.(o);
+      // The spec's alpha, beta and gamma here are rates about the device's z,
+      // x and y axes respectively — not the Euler angles of the same names.
+      this.feedGyro(r.beta ?? 0, r.gamma ?? 0, r.alpha ?? 0);
     };
 
-    window.addEventListener('deviceorientationabsolute', onOrient as EventListener);
-    window.addEventListener('deviceorientation', onOrient as EventListener);
+    window.addEventListener('deviceorientationabsolute', onAbsolute);
+    window.addEventListener('deviceorientation', onRelative);
     window.addEventListener('devicemotion', onMotion as EventListener);
     this.detach.push(() => {
-      window.removeEventListener('deviceorientationabsolute', onOrient as EventListener);
-      window.removeEventListener('deviceorientation', onOrient as EventListener);
+      window.removeEventListener('deviceorientationabsolute', onAbsolute);
+      window.removeEventListener('deviceorientation', onRelative);
       window.removeEventListener('devicemotion', onMotion as EventListener);
     });
 
@@ -317,9 +499,6 @@ export class PoseTracker {
     }
   }
 
-  tick() {
-    this.status.gpsAge = this.lastFix ? (performance.now() - this.lastFix) / 1000 : null;
-  }
 }
 
 export function screenAngle(): number {
