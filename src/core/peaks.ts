@@ -16,6 +16,12 @@ export interface Peak {
   lat: number;
   /** Catalogued elevation, metres. May be absent in raw OSM data. */
   ele?: number;
+  /**
+   * The DEM's elevation at this summit. Usually lower than `ele` — a 30 m grid
+   * cannot hold the top of a sharp peak — and it is what the label anchors to,
+   * so the marker sits on the summit the renderer actually drew.
+   */
+  demEle?: number;
   /** Topographic prominence, metres, when known. */
   prom?: number;
   /** Where the record came from. */

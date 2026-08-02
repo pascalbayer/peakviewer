@@ -5,6 +5,10 @@
   --txt: #e8edf4;
   --dim: #93a1b4;
   --accent: #ffd166;
+  --focus: #ffd166;
+  /* Committed to a single dark world on purpose: this is a viewfinder. The
+     panorama is drawn as near-white paper with dark ink, and chrome that
+     switched to light would fight it for the eye every time. */
   color-scheme: dark;
 }
 
@@ -61,6 +65,7 @@ body {
   top: 48px; left: 10px;
   display: flex; gap: 6px; flex-wrap: wrap;
   font: 500 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
 }
 .badge span {
   background: rgba(6, 10, 16, .6);
@@ -71,6 +76,41 @@ body {
   white-space: nowrap;
 }
 .badge b { color: var(--txt); font-weight: 600; }
+
+canvas.labels {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.card {
+  position: absolute;
+  left: 10px; right: 10px; bottom: 10px;
+  max-width: 340px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(12, 17, 24, .92);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--line);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, .45);
+  transition: opacity .16s, transform .16s;
+}
+.card.hidden { opacity: 0; transform: translateY(6px); pointer-events: none; }
+.card h3 { margin: 0 0 8px; font-size: 16px; letter-spacing: -.01em; }
+.card-rows {
+  display: grid; grid-template-columns: auto 1fr; gap: 3px 14px;
+  font: 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.card-rows span { color: var(--dim); }
+.card-rows b { text-align: right; font-weight: 600; }
+.card-x {
+  position: absolute; top: 6px; right: 8px;
+  background: none; border: 0; color: var(--dim);
+  font-size: 20px; line-height: 1; cursor: pointer; padding: 2px 6px;
+}
 
 #loading {
   position: absolute; inset: 0;
@@ -123,7 +163,7 @@ body {
 #grip .title { color: var(--txt); font-weight: 600; }
 
 .ctl-h {
-  font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase;
+  font-size: 10.5px; letter-spacing: .11em; text-transform: uppercase;
   color: var(--dim); margin: 12px 0 6px;
 }
 .ctl-h:first-child { margin-top: 2px; }
@@ -142,7 +182,11 @@ body {
 
 .row { display: flex; align-items: center; gap: 10px; margin: 7px 0; }
 .row > span:first-child { flex: 0 0 auto; min-width: 92px; font-size: 12.5px; }
-.row.slider > b { flex: 0 0 auto; min-width: 62px; text-align: right; font: 600 12px ui-monospace, Menlo, monospace; color: var(--accent); }
+.row.slider > b {
+  flex: 0 0 auto; min-width: 62px; text-align: right; color: var(--accent);
+  font: 600 12px ui-monospace, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
 .row.slider input { flex: 1 1 auto; min-width: 60px; }
 .row.switch { justify-content: space-between; }
 
@@ -159,6 +203,7 @@ input[type=checkbox] { accent-color: var(--accent); width: 18px; height: 18px; }
 .readout {
   display: grid; grid-template-columns: auto 1fr; gap: 3px 12px;
   font: 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
   margin-top: 8px;
   padding: 9px 10px;
   background: rgba(0, 0, 0, .28);
@@ -181,4 +226,19 @@ input[type=checkbox] { accent-color: var(--accent); width: 18px; height: 18px; }
   #sheet { max-height: none; width: 330px; flex: 0 0 330px; border-top: 0; border-left: 1px solid var(--line); }
   #sheet.collapsed { width: 0; flex-basis: 0; padding: 0; border: 0; }
   #grip { display: none; }
+}
+
+/* --------------------------------------------------------------- a11y bits */
+
+:where(button, input, select, a):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+  }
 }

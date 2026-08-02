@@ -1,0 +1,2436 @@
+[
+ {
+  "id": "cat:mont_blanc",
+  "name": "Mont Blanc",
+  "lon": 6.860962,
+  "lat": 45.832627,
+  "ele": 4808,
+  "demEle": 4675,
+  "prom": 7299,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "cat:dufourspitze",
+  "name": "Dufourspitze",
+  "lon": 7.868443,
+  "lat": 45.937661,
+  "ele": 4634,
+  "demEle": 4518,
+  "prom": 46,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "cat:nordend",
+  "name": "Nordend",
+  "lon": 7.869473,
+  "lat": 45.941959,
+  "ele": 4609,
+  "demEle": 4521,
+  "prom": 3081,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "cat:zumsteinspitze",
+  "name": "Zumsteinspitze",
+  "lon": 7.871532,
+  "lat": 45.931692,
+  "ele": 4563,
+  "demEle": 4500,
+  "prom": 67,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "cat:signalkuppe",
+  "name": "Signalkuppe",
+  "lon": 7.876682,
+  "lat": 45.926677,
+  "ele": 4554,
+  "demEle": 4501,
+  "prom": 82,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "cat:dom",
+  "name": "Dom",
+  "lon": 7.858315,
+  "lat": 46.093948,
+  "ele": 4545,
+  "demEle": 4496,
+  "prom": 1017,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "cat:lyskamm",
+  "name": "Lyskamm",
+  "lon": 7.833424,
+  "lat": 45.923334,
+  "ele": 4527,
+  "demEle": 4466,
+  "prom": 327,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "cat:weisshorn",
+  "name": "Weisshorn",
+  "lon": 7.715492,
+  "lat": 46.101566,
+  "ele": 4506,
+  "demEle": 4443,
+  "prom": 1200,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "cat:t\u00e4schhorn",
+  "name": "T\u00e4schhorn",
+  "lon": 7.856941,
+  "lat": 46.083948,
+  "ele": 4491,
+  "demEle": 4394,
+  "prom": 148,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "cat:matterhorn",
+  "name": "Matterhorn",
+  "lon": 7.657127,
+  "lat": 45.976685,
+  "ele": 4478,
+  "demEle": 4355,
+  "prom": 942,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "cat:dent_blanche",
+  "name": "Dent Blanche",
+  "lon": 7.611122,
+  "lat": 46.033441,
+  "ele": 4358,
+  "demEle": 4269,
+  "prom": 841,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "dem:5.7623,45.7714",
+  "name": "Pt. 4341",
+  "lon": 5.762329,
+  "lat": 45.771355,
+  "demEle": 4341,
+  "prom": 3995,
+  "src": "DEM"
+ },
+ {
+  "id": "cat:nadelhorn",
+  "name": "Nadelhorn",
+  "lon": 7.863808,
+  "lat": 46.109184,
+  "ele": 4327,
+  "demEle": 4239,
+  "prom": 56,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "cat:grand_combin",
+  "name": "Grand Combin",
+  "lon": 7.299042,
+  "lat": 45.938736,
+  "ele": 4314,
+  "demEle": 4236,
+  "prom": 1423,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "cat:lenzspitze",
+  "name": "Lenzspitze",
+  "lon": 7.867241,
+  "lat": 46.104899,
+  "ele": 4294,
+  "demEle": 4242,
+  "prom": 195,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "cat:finsteraarhorn",
+  "name": "Finsteraarhorn",
+  "lon": 8.123016,
+  "lat": 46.539027,
+  "ele": 4274,
+  "demEle": 4060,
+  "prom": 911,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "cat:zinalrothorn",
+  "name": "Zinalrothorn",
+  "lon": 7.688713,
+  "lat": 46.064894,
+  "ele": 4221,
+  "demEle": 4085,
+  "prom": 389,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "cat:grandes_jorasses",
+  "name": "Grandes Jorasses",
+  "lon": 6.985931,
+  "lat": 45.868019,
+  "ele": 4208,
+  "demEle": 4062,
+  "prom": 1580,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "cat:alphubel",
+  "name": "Alphubel",
+  "lon": 7.865181,
+  "lat": 46.061559,
+  "ele": 4206,
+  "demEle": 4174,
+  "prom": 349,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "cat:rimpfischhorn",
+  "name": "Rimpfischhorn",
+  "lon": 7.900887,
+  "lat": 46.013416,
+  "ele": 4199,
+  "demEle": 4126,
+  "prom": 579,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "cat:breithorn",
+  "name": "Breithorn",
+  "lon": 7.755489,
+  "lat": 45.939094,
+  "ele": 4164,
+  "demEle": 4108,
+  "prom": 52,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "cat:jungfrau",
+  "name": "Jungfrau",
+  "lon": 7.960968,
+  "lat": 46.537137,
+  "ele": 4158,
+  "demEle": 4000,
+  "prom": 579,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "cat:bishorn",
+  "name": "Bishorn",
+  "lon": 7.715492,
+  "lat": 46.118228,
+  "ele": 4153,
+  "demEle": 4113,
+  "prom": 75,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "cat:m\u00f6nch",
+  "name": "M\u00f6nch",
+  "lon": 7.996674,
+  "lat": 46.557916,
+  "ele": 4107,
+  "demEle": 3994,
+  "prom": 514,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "dem:7.8842,46.0259",
+  "name": "Pt. 4086",
+  "lon": 7.884235,
+  "lat": 46.025932,
+  "demEle": 4086,
+  "prom": 737,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.6049,45.9700",
+  "name": "Pt. 4085",
+  "lon": 7.604942,
+  "lat": 45.970004,
+  "demEle": 4085,
+  "prom": 649,
+  "src": "DEM"
+ },
+ {
+  "id": "cat:schreckhorn",
+  "name": "Schreckhorn",
+  "lon": 8.113403,
+  "lat": 46.592844,
+  "ele": 4078,
+  "demEle": 3680,
+  "prom": 645,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "dem:7.9939,46.4672",
+  "name": "Pt. 4065",
+  "lon": 7.993927,
+  "lat": 46.467187,
+  "demEle": 4065,
+  "prom": 2068,
+  "src": "DEM"
+ },
+ {
+  "id": "cat:obergabelhorn",
+  "name": "Obergabelhorn",
+  "lon": 7.66674,
+  "lat": 46.038684,
+  "ele": 4063,
+  "demEle": 3961,
+  "prom": 438,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "cat:gran_paradiso",
+  "name": "Gran Paradiso",
+  "lon": 7.268829,
+  "lat": 45.515008,
+  "ele": 4061,
+  "demEle": 3941,
+  "prom": 2385,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "cat:allalinhorn",
+  "name": "Allalinhorn",
+  "lon": 7.894707,
+  "lat": 46.045834,
+  "ele": 4027,
+  "demEle": 3982,
+  "prom": 227,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "cat:weissmies",
+  "name": "Weissmies",
+  "lon": 8.013153,
+  "lat": 46.127508,
+  "ele": 4017,
+  "demEle": 3921,
+  "prom": 1094,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "cat:lagginhorn",
+  "name": "Lagginhorn",
+  "lon": 8.004913,
+  "lat": 46.154151,
+  "ele": 4010,
+  "demEle": 3869,
+  "prom": 203,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "dem:6.9695,45.9349",
+  "name": "Pt. 4006",
+  "lon": 6.969452,
+  "lat": 45.934916,
+  "demEle": 4006,
+  "prom": 639,
+  "src": "DEM"
+ },
+ {
+  "id": "cat:fletschhorn",
+  "name": "Fletschhorn",
+  "lon": 8.002167,
+  "lat": 46.167468,
+  "ele": 3985,
+  "demEle": 3886,
+  "prom": 457,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "cat:bietschhorn",
+  "name": "Bietschhorn",
+  "lon": 7.851105,
+  "lat": 46.393358,
+  "ele": 3934,
+  "demEle": 3784,
+  "prom": 694,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "cat:ulrichshorn",
+  "name": "Ulrichshorn",
+  "lon": 7.876167,
+  "lat": 46.117752,
+  "ele": 3925,
+  "demEle": 3872,
+  "prom": 42,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "dem:6.3556,44.9220",
+  "name": "Pt. 3921",
+  "lon": 6.355591,
+  "lat": 44.922029,
+  "demEle": 3921,
+  "prom": 1849,
+  "src": "DEM"
+ },
+ {
+  "id": "cat:klein_matterhorn",
+  "name": "Klein Matterhorn",
+  "lon": 7.729053,
+  "lat": 45.937423,
+  "ele": 3883,
+  "demEle": 3802,
+  "prom": 28,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "dem:6.3995,44.8987",
+  "name": "Pt. 3864",
+  "lon": 6.399536,
+  "lat": 44.898687,
+  "demEle": 3864,
+  "prom": 624,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:9.9261,46.3659",
+  "name": "Pt. 3856",
+  "lon": 9.926147,
+  "lat": 46.365884,
+  "demEle": 3856,
+  "prom": 1935,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.6769,46.0419",
+  "name": "Pt. 3849",
+  "lon": 7.676868,
+  "lat": 46.041902,
+  "demEle": 3849,
+  "prom": 1650,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.2578,45.5958",
+  "name": "Pt. 3782",
+  "lon": 7.257843,
+  "lat": 45.595783,
+  "demEle": 3782,
+  "prom": 569,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.5414,46.5097",
+  "name": "Pt. 3779",
+  "lon": 10.541382,
+  "lat": 46.509735,
+  "demEle": 3779,
+  "prom": 1689,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.4117,45.9884",
+  "name": "Pt. 3754",
+  "lon": 7.411652,
+  "lat": 45.988375,
+  "demEle": 3754,
+  "prom": 735,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.2496,45.8929",
+  "name": "Pt. 3700",
+  "lon": 7.249603,
+  "lat": 45.892876,
+  "demEle": 3700,
+  "prom": 635,
+  "src": "DEM"
+ },
+ {
+  "id": "cat:balmhorn",
+  "name": "Balmhorn",
+  "lon": 7.691803,
+  "lat": 46.425552,
+  "ele": 3698,
+  "demEle": 3615,
+  "prom": 949,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "dem:6.9997,45.5054",
+  "name": "Pt. 3593",
+  "lon": 6.999664,
+  "lat": 45.505384,
+  "demEle": 3593,
+  "prom": 1017,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.0587,45.2788",
+  "name": "Pt. 3587",
+  "lon": 7.058716,
+  "lat": 45.278752,
+  "demEle": 3587,
+  "prom": 931,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.7281,46.7963",
+  "name": "Pt. 3583",
+  "lon": 10.728149,
+  "lat": 46.796299,
+  "demEle": 3583,
+  "prom": 2061,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.5050,45.9769",
+  "name": "Pt. 3572",
+  "lon": 7.505035,
+  "lat": 45.976924,
+  "demEle": 3572,
+  "prom": 508,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:8.4210,46.6457",
+  "name": "Pt. 3569",
+  "lon": 8.421021,
+  "lat": 46.645665,
+  "demEle": 3569,
+  "prom": 1391,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.3226,44.9998",
+  "name": "Pt. 3569",
+  "lon": 6.322632,
+  "lat": 44.999767,
+  "demEle": 3569,
+  "prom": 656,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:8.9154,46.8113",
+  "name": "Pt. 3562",
+  "lon": 8.915405,
+  "lat": 46.811339,
+  "demEle": 3562,
+  "prom": 1374,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.8610,45.5333",
+  "name": "Pt. 3561",
+  "lon": 6.860962,
+  "lat": 45.533289,
+  "demEle": 3561,
+  "prom": 963,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.1027,45.3328",
+  "name": "Pt. 3559",
+  "lon": 7.102661,
+  "lat": 45.33284,
+  "demEle": 3559,
+  "prom": 611,
+  "src": "DEM"
+ },
+ {
+  "id": "cat:monte_leone",
+  "name": "Monte Leone",
+  "lon": 8.109283,
+  "lat": 46.2492,
+  "ele": 3553,
+  "demEle": 3397,
+  "prom": 1233,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "dem:6.8280,45.4023",
+  "name": "Pt. 3553",
+  "lon": 6.828003,
+  "lat": 45.402307,
+  "demEle": 3553,
+  "prom": 767,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.7401,45.3251",
+  "name": "Pt. 3541",
+  "lon": 6.740112,
+  "lat": 45.325117,
+  "demEle": 3541,
+  "prom": 924,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.9149,46.7737",
+  "name": "Pt. 3519",
+  "lon": 10.914917,
+  "lat": 46.773731,
+  "demEle": 3519,
+  "prom": 654,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.7715,46.4880",
+  "name": "Pt. 3518",
+  "lon": 7.771454,
+  "lat": 46.487993,
+  "demEle": 3518,
+  "prom": 722,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:9.7504,46.2672",
+  "name": "Pt. 3515",
+  "lon": 9.750366,
+  "lat": 46.26724,
+  "demEle": 3515,
+  "prom": 858,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.7357,46.4672",
+  "name": "Pt. 3471",
+  "lon": 7.735748,
+  "lat": 46.467187,
+  "demEle": 3471,
+  "prom": 563,
+  "src": "DEM"
+ },
+ {
+  "id": "cat:theodulhorn",
+  "name": "Theodulhorn",
+  "lon": 7.708797,
+  "lat": 45.949837,
+  "ele": 3469,
+  "demEle": 3395,
+  "prom": 57,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "dem:7.1700,45.4110",
+  "name": "Pt. 3463",
+  "lon": 7.169952,
+  "lat": 45.410984,
+  "demEle": 3463,
+  "prom": 567,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.4336,46.0551",
+  "name": "Pt. 3461",
+  "lon": 7.433624,
+  "lat": 46.055126,
+  "demEle": 3461,
+  "prom": 642,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.8939,45.3328",
+  "name": "Pt. 3452",
+  "lon": 6.893921,
+  "lat": 45.33284,
+  "demEle": 3452,
+  "prom": 636,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.3842,45.6784",
+  "name": "Pt. 3427",
+  "lon": 7.384186,
+  "lat": 45.678361,
+  "demEle": 3427,
+  "prom": 672,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.6193,45.2788",
+  "name": "Pt. 3424",
+  "lon": 6.619263,
+  "lat": 45.278752,
+  "demEle": 3424,
+  "prom": 719,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:11.1676,46.9540",
+  "name": "Pt. 3417",
+  "lon": 11.167603,
+  "lat": 46.954012,
+  "demEle": 3417,
+  "prom": 976,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.0917,44.6647",
+  "name": "Pt. 3409",
+  "lon": 7.091675,
+  "lat": 44.664746,
+  "demEle": 3409,
+  "prom": 1467,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.3650,45.9024",
+  "name": "Pt. 3408",
+  "lon": 7.36496,
+  "lat": 45.902433,
+  "demEle": 3408,
+  "prom": 591,
+  "src": "DEM"
+ },
+ {
+  "id": "cat:mettelhorn",
+  "name": "Mettelhorn",
+  "lon": 7.741413,
+  "lat": 46.055722,
+  "ele": 3406,
+  "demEle": 3304,
+  "prom": 177,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "dem:6.1359,45.1394",
+  "name": "Pt. 3399",
+  "lon": 6.135864,
+  "lat": 45.13943,
+  "demEle": 3399,
+  "prom": 1247,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.0161,45.6323",
+  "name": "Pt. 3382",
+  "lon": 7.016144,
+  "lat": 45.632286,
+  "demEle": 3382,
+  "prom": 756,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.5963,46.1075",
+  "name": "Pt. 3379",
+  "lon": 10.596313,
+  "lat": 46.107517,
+  "demEle": 3379,
+  "prom": 1459,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:8.0005,46.0363",
+  "name": "Pt. 3375",
+  "lon": 8.00045,
+  "lat": 46.036301,
+  "demEle": 3375,
+  "prom": 715,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.9173,45.3840",
+  "name": "Pt. 3353",
+  "lon": 6.917267,
+  "lat": 45.383984,
+  "demEle": 3353,
+  "prom": 608,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.4913,45.8699",
+  "name": "Pt. 3333",
+  "lon": 7.491302,
+  "lat": 45.869931,
+  "demEle": 3333,
+  "prom": 539,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:8.4979,46.7060",
+  "name": "Pt. 3320",
+  "lon": 8.497925,
+  "lat": 46.705969,
+  "demEle": 3320,
+  "prom": 627,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.6873,45.8711",
+  "name": "Pt. 3315",
+  "lon": 7.68734,
+  "lat": 45.871127,
+  "demEle": 3315,
+  "prom": 514,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.9936,46.0868",
+  "name": "Pt. 3285",
+  "lon": 7.993584,
+  "lat": 46.086805,
+  "demEle": 3285,
+  "prom": 715,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:8.3070,46.4274",
+  "name": "Pt. 3285",
+  "lon": 8.307037,
+  "lat": 46.427446,
+  "demEle": 3285,
+  "prom": 883,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.8939,45.1704",
+  "name": "Pt. 3261",
+  "lon": 6.893921,
+  "lat": 45.17042,
+  "demEle": 3261,
+  "prom": 1043,
+  "src": "DEM"
+ },
+ {
+  "id": "cat:dents_du_midi",
+  "name": "Dents du Midi",
+  "lon": 6.92276,
+  "lat": 46.161761,
+  "ele": 3257,
+  "demEle": 3099,
+  "prom": 1618,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "cat:wildhorn",
+  "name": "Wildhorn",
+  "lon": 7.362213,
+  "lat": 46.353563,
+  "ele": 3248,
+  "demEle": 3164,
+  "prom": 773,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "dem:9.5636,46.4870",
+  "name": "Pt. 3246",
+  "lon": 9.563599,
+  "lat": 46.487047,
+  "demEle": 3246,
+  "prom": 1163,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.2887,46.4189",
+  "name": "Pt. 3246",
+  "lon": 10.288696,
+  "lat": 46.418926,
+  "demEle": 3246,
+  "prom": 983,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.3336,45.1239",
+  "name": "Pt. 3235",
+  "lon": 6.333618,
+  "lat": 45.123929,
+  "demEle": 3235,
+  "prom": 864,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.9269,45.1859",
+  "name": "Pt. 3230",
+  "lon": 6.92688,
+  "lat": 45.185909,
+  "demEle": 3230,
+  "prom": 663,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:9.7064,46.5249",
+  "name": "Pt. 3221",
+  "lon": 9.706421,
+  "lat": 46.524855,
+  "demEle": 3221,
+  "prom": 895,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.2008,46.3886",
+  "name": "Pt. 3214",
+  "lon": 10.200806,
+  "lat": 46.388622,
+  "demEle": 3214,
+  "prom": 825,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.0690,46.7963",
+  "name": "Pt. 3213",
+  "lon": 10.06897,
+  "lat": 46.796299,
+  "demEle": 3213,
+  "prom": 862,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.5352,46.4066",
+  "name": "Pt. 3198",
+  "lon": 7.535248,
+  "lat": 46.406617,
+  "demEle": 3198,
+  "prom": 924,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:9.8712,46.6230",
+  "name": "Pt. 3187",
+  "lon": 9.871216,
+  "lat": 46.623034,
+  "demEle": 3187,
+  "prom": 696,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:8.7726,46.7436",
+  "name": "Pt. 3184",
+  "lon": 8.772583,
+  "lat": 46.743625,
+  "demEle": 3184,
+  "prom": 607,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:9.0363,46.4946",
+  "name": "Pt. 3183",
+  "lon": 9.036255,
+  "lat": 46.494611,
+  "demEle": 3183,
+  "prom": 1099,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.0628,45.8125",
+  "name": "Pt. 3180",
+  "lon": 7.062836,
+  "lat": 45.812529,
+  "demEle": 3180,
+  "prom": 672,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:8.4691,46.4123",
+  "name": "Pt. 3174",
+  "lon": 8.469086,
+  "lat": 46.412298,
+  "demEle": 3174,
+  "prom": 845,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.7879,45.8298",
+  "name": "Pt. 3174",
+  "lon": 7.787933,
+  "lat": 45.829756,
+  "demEle": 3174,
+  "prom": 503,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.9049,44.8753",
+  "name": "Pt. 3168",
+  "lon": 6.904907,
+  "lat": 44.875336,
+  "demEle": 3168,
+  "prom": 912,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.1947,46.3061",
+  "name": "Pt. 3162",
+  "lon": 7.194672,
+  "lat": 46.30615,
+  "demEle": 3162,
+  "prom": 920,
+  "src": "DEM"
+ },
+ {
+  "id": "cat:gornergrat",
+  "name": "Gornergrat",
+  "lon": 7.785015,
+  "lat": 45.983246,
+  "ele": 3135,
+  "demEle": 3108,
+  "prom": 39,
+  "src": "catalogue+DEM"
+ },
+ {
+  "id": "dem:6.1908,44.7350",
+  "name": "Pt. 3113",
+  "lon": 6.190796,
+  "lat": 44.735028,
+  "demEle": 3113,
+  "prom": 713,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.1129,46.4265",
+  "name": "Pt. 3090",
+  "lon": 10.112915,
+  "lat": 46.426499,
+  "demEle": 3090,
+  "prom": 660,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.2777,46.7436",
+  "name": "Pt. 3088",
+  "lon": 10.27771,
+  "lat": 46.743625,
+  "demEle": 3088,
+  "prom": 868,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:8.9703,46.6306",
+  "name": "Pt. 3069",
+  "lon": 8.970337,
+  "lat": 46.630579,
+  "demEle": 3069,
+  "prom": 786,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.2008,46.5777",
+  "name": "Pt. 3069",
+  "lon": 10.200806,
+  "lat": 46.577743,
+  "demEle": 3069,
+  "prom": 705,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:9.7284,46.4492",
+  "name": "Pt. 3065",
+  "lon": 9.728394,
+  "lat": 46.449212,
+  "demEle": 3065,
+  "prom": 671,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:8.4320,46.7737",
+  "name": "Pt. 3059",
+  "lon": 8.432007,
+  "lat": 46.773731,
+  "demEle": 3059,
+  "prom": 857,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:8.2219,46.3289",
+  "name": "Pt. 3047",
+  "lon": 8.221893,
+  "lat": 46.328913,
+  "demEle": 3047,
+  "prom": 564,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.4095,46.7060",
+  "name": "Pt. 3038",
+  "lon": 10.409546,
+  "lat": 46.705969,
+  "demEle": 3038,
+  "prom": 728,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.9228,46.1275",
+  "name": "Pt. 3036",
+  "lon": 6.92276,
+  "lat": 46.127508,
+  "demEle": 3036,
+  "prom": 619,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:8.4663,46.5182",
+  "name": "Pt. 3033",
+  "lon": 8.466339,
+  "lat": 46.518241,
+  "demEle": 3033,
+  "prom": 613,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:9.3329,46.9015",
+  "name": "Pt. 3028",
+  "lon": 9.332886,
+  "lat": 46.901492,
+  "demEle": 3028,
+  "prom": 659,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.8719,45.2401",
+  "name": "Pt. 3022",
+  "lon": 6.871948,
+  "lat": 45.240086,
+  "demEle": 3022,
+  "prom": 750,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.2777,46.6909",
+  "name": "Pt. 3016",
+  "lon": 10.27771,
+  "lat": 46.690899,
+  "demEle": 3016,
+  "prom": 664,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.8500,46.0237",
+  "name": "Pt. 3005",
+  "lon": 6.849976,
+  "lat": 46.023668,
+  "demEle": 3005,
+  "prom": 1410,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.2565,44.2255",
+  "name": "Pt. 2992",
+  "lon": 7.25647,
+  "lat": 44.22552,
+  "demEle": 2992,
+  "prom": 894,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:9.2780,46.4870",
+  "name": "Pt. 2966",
+  "lon": 9.277954,
+  "lat": 46.487047,
+  "demEle": 2966,
+  "prom": 839,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.2228,47.0514",
+  "name": "Pt. 2958",
+  "lon": 10.222778,
+  "lat": 47.051411,
+  "demEle": 2958,
+  "prom": 1076,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:8.7286,46.5777",
+  "name": "Pt. 2935",
+  "lon": 8.728638,
+  "lat": 46.577743,
+  "demEle": 2935,
+  "prom": 710,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.9928,44.2649",
+  "name": "Pt. 2934",
+  "lon": 6.992798,
+  "lat": 44.264871,
+  "demEle": 2934,
+  "prom": 787,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.8209,45.7167",
+  "name": "Pt. 2922",
+  "lon": 7.820892,
+  "lat": 45.716728,
+  "demEle": 2922,
+  "prom": 758,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.8710,46.1532",
+  "name": "Pt. 2908",
+  "lon": 10.870972,
+  "lat": 46.1532,
+  "demEle": 2908,
+  "prom": 1185,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.7511,44.9687",
+  "name": "Pt. 2908",
+  "lon": 6.751099,
+  "lat": 44.968684,
+  "demEle": 2908,
+  "prom": 832,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.1260,46.2359",
+  "name": "Pt. 2902",
+  "lon": 7.126007,
+  "lat": 46.235903,
+  "demEle": 2902,
+  "prom": 854,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.9696,45.8721",
+  "name": "Pt. 2895",
+  "lon": 7.969551,
+  "lat": 45.872083,
+  "demEle": 2895,
+  "prom": 557,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.6522,44.4926",
+  "name": "Pt. 2883",
+  "lon": 6.652222,
+  "lat": 44.492587,
+  "demEle": 2883,
+  "prom": 695,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:8.6174,46.5787",
+  "name": "Pt. 2876",
+  "lon": 8.617401,
+  "lat": 46.578687,
+  "demEle": 2876,
+  "prom": 768,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:9.9811,46.0694",
+  "name": "Pt. 2875",
+  "lon": 9.981079,
+  "lat": 46.06942,
+  "demEle": 2875,
+  "prom": 1552,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:8.7396,46.4265",
+  "name": "Pt. 2853",
+  "lon": 8.739624,
+  "lat": 46.426499,
+  "demEle": 2853,
+  "prom": 708,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.9698,47.4095",
+  "name": "Pt. 2822",
+  "lon": 10.969849,
+  "lat": 47.409503,
+  "demEle": 2822,
+  "prom": 1563,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:9.7064,47.0514",
+  "name": "Pt. 2822",
+  "lon": 9.706421,
+  "lat": 47.051411,
+  "demEle": 2822,
+  "prom": 633,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:5.9381,45.0386",
+  "name": "Pt. 2805",
+  "lon": 5.93811,
+  "lat": 45.038597,
+  "demEle": 2805,
+  "prom": 1391,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.4315,47.2009",
+  "name": "Pt. 2790",
+  "lon": 10.431519,
+  "lat": 47.20091,
+  "demEle": 2790,
+  "prom": 904,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.5094,44.2885",
+  "name": "Pt. 2790",
+  "lon": 6.509399,
+  "lat": 44.288469,
+  "demEle": 2790,
+  "prom": 607,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:9.6185,46.7361",
+  "name": "Pt. 2781",
+  "lon": 9.61853,
+  "lat": 46.736096,
+  "demEle": 2781,
+  "prom": 1065,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.6962,45.6486",
+  "name": "Pt. 2770",
+  "lon": 6.696167,
+  "lat": 45.648608,
+  "demEle": 2770,
+  "prom": 801,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:5.9930,45.1704",
+  "name": "Pt. 2765",
+  "lon": 5.993042,
+  "lat": 45.17042,
+  "demEle": 2765,
+  "prom": 838,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:9.0692,46.3431",
+  "name": "Pt. 2762",
+  "lon": 9.069214,
+  "lat": 46.343136,
+  "demEle": 2762,
+  "prom": 714,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:9.0143,47.0065",
+  "name": "Pt. 2749",
+  "lon": 9.014282,
+  "lat": 47.00648,
+  "demEle": 2749,
+  "prom": 723,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.1349,47.0813",
+  "name": "Pt. 2747",
+  "lon": 10.134888,
+  "lat": 47.081345,
+  "demEle": 2747,
+  "prom": 746,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.1466,45.0541",
+  "name": "Pt. 2745",
+  "lon": 7.146606,
+  "lat": 45.054121,
+  "demEle": 2745,
+  "prom": 665,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.1139,45.2401",
+  "name": "Pt. 2741",
+  "lon": 6.113892,
+  "lat": 45.240086,
+  "demEle": 2741,
+  "prom": 770,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.9708,44.1546",
+  "name": "Pt. 2734",
+  "lon": 6.970825,
+  "lat": 44.154622,
+  "demEle": 2734,
+  "prom": 626,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:5.8392,44.7740",
+  "name": "Pt. 2730",
+  "lon": 5.839233,
+  "lat": 44.774036,
+  "demEle": 2730,
+  "prom": 1463,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:5.9381,44.9842",
+  "name": "Pt. 2710",
+  "lon": 5.93811,
+  "lat": 44.984228,
+  "demEle": 2710,
+  "prom": 745,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:11.2775,46.7361",
+  "name": "Pt. 2702",
+  "lon": 11.277466,
+  "lat": 46.736096,
+  "demEle": 2702,
+  "prom": 1222,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:8.0804,46.6984",
+  "name": "Pt. 2697",
+  "lon": 8.080444,
+  "lat": 46.698435,
+  "demEle": 2697,
+  "prom": 806,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.4886,46.4956",
+  "name": "Pt. 2690",
+  "lon": 7.488556,
+  "lat": 46.495556,
+  "demEle": 2690,
+  "prom": 769,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.3556,45.4486",
+  "name": "Pt. 2679",
+  "lon": 6.355591,
+  "lat": 45.448571,
+  "demEle": 2679,
+  "prom": 651,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.1129,46.9390",
+  "name": "Pt. 2658",
+  "lon": 10.112915,
+  "lat": 46.939012,
+  "demEle": 2658,
+  "prom": 623,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:11.0138,47.3574",
+  "name": "Pt. 2654",
+  "lon": 11.013794,
+  "lat": 47.357432,
+  "demEle": 2654,
+  "prom": 1029,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:9.4647,46.9015",
+  "name": "Pt. 2627",
+  "lon": 9.464722,
+  "lat": 46.901492,
+  "demEle": 2627,
+  "prom": 1294,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:5.8942,44.6335",
+  "name": "Pt. 2596",
+  "lon": 5.894165,
+  "lat": 44.633482,
+  "demEle": 2596,
+  "prom": 1135,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.5533,45.9550",
+  "name": "Pt. 2576",
+  "lon": 6.553345,
+  "lat": 45.954969,
+  "demEle": 2576,
+  "prom": 1418,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.1239,47.1636",
+  "name": "Pt. 2549",
+  "lon": 10.123901,
+  "lat": 47.163575,
+  "demEle": 2549,
+  "prom": 694,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:11.0687,47.3500",
+  "name": "Pt. 2528",
+  "lon": 11.068726,
+  "lat": 47.349989,
+  "demEle": 2528,
+  "prom": 699,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.1123,46.0532",
+  "name": "Pt. 2518",
+  "lon": 7.112274,
+  "lat": 46.05322,
+  "demEle": 2518,
+  "prom": 1015,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.6849,44.1704",
+  "name": "Pt. 2490",
+  "lon": 7.684937,
+  "lat": 44.170385,
+  "demEle": 2490,
+  "prom": 690,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.2777,47.2830",
+  "name": "Pt. 2485",
+  "lon": 10.27771,
+  "lat": 47.282956,
+  "demEle": 2485,
+  "prom": 778,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.9994,45.7148",
+  "name": "Pt. 2469",
+  "lon": 7.99942,
+  "lat": 45.71481,
+  "demEle": 2469,
+  "prom": 551,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.6622,47.1486",
+  "name": "Pt. 2465",
+  "lon": 10.662231,
+  "lat": 47.148634,
+  "demEle": 2465,
+  "prom": 912,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:5.9601,44.7194",
+  "name": "Pt. 2424",
+  "lon": 5.960083,
+  "lat": 44.719417,
+  "demEle": 2424,
+  "prom": 730,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:9.4977,46.7737",
+  "name": "Pt. 2401",
+  "lon": 9.497681,
+  "lat": 46.773731,
+  "demEle": 2401,
+  "prom": 823,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.1507,46.3839",
+  "name": "Pt. 2362",
+  "lon": 7.150726,
+  "lat": 46.383886,
+  "demEle": 2362,
+  "prom": 802,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.3556,45.5641",
+  "name": "Pt. 2334",
+  "lon": 6.355591,
+  "lat": 45.564064,
+  "demEle": 2334,
+  "prom": 601,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:8.2082,45.9445",
+  "name": "Pt. 2330",
+  "lon": 8.20816,
+  "lat": 45.944466,
+  "demEle": 2330,
+  "prom": 532,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.4215,45.8020",
+  "name": "Pt. 2312",
+  "lon": 6.421509,
+  "lat": 45.801999,
+  "demEle": 2312,
+  "prom": 826,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:9.8163,45.9321",
+  "name": "Pt. 2309",
+  "lon": 9.816284,
+  "lat": 45.93205,
+  "demEle": 2309,
+  "prom": 630,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:9.3878,45.9550",
+  "name": "Pt. 2295",
+  "lon": 9.387817,
+  "lat": 45.954969,
+  "demEle": 2295,
+  "prom": 1337,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.1425,46.5220",
+  "name": "Pt. 2286",
+  "lon": 7.142487,
+  "lat": 46.522021,
+  "demEle": 2286,
+  "prom": 1007,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:9.3439,47.2531",
+  "name": "Pt. 2274",
+  "lon": 9.343872,
+  "lat": 47.253136,
+  "demEle": 2274,
+  "prom": 1695,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.7841,46.3356",
+  "name": "Pt. 2267",
+  "lon": 6.784058,
+  "lat": 46.335551,
+  "demEle": 2267,
+  "prom": 761,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:8.0365,46.7888",
+  "name": "Pt. 2259",
+  "lon": 8.036499,
+  "lat": 46.788777,
+  "demEle": 2259,
+  "prom": 1208,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:9.3988,47.1262",
+  "name": "Pt. 2242",
+  "lon": 9.398804,
+  "lat": 47.126213,
+  "demEle": 2242,
+  "prom": 1184,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:5.8502,44.9765",
+  "name": "Pt. 2221",
+  "lon": 5.85022,
+  "lat": 44.976457,
+  "demEle": 2221,
+  "prom": 682,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:8.3977,46.0913",
+  "name": "Pt. 2215",
+  "lon": 8.397675,
+  "lat": 46.091329,
+  "demEle": 2215,
+  "prom": 1393,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.6512,47.3723",
+  "name": "Pt. 2209",
+  "lon": 10.651245,
+  "lat": 47.372315,
+  "demEle": 2209,
+  "prom": 617,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.8710,47.4318",
+  "name": "Pt. 2205",
+  "lon": 10.870972,
+  "lat": 47.431803,
+  "demEle": 2205,
+  "prom": 902,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.2897,45.8250",
+  "name": "Pt. 2175",
+  "lon": 6.289673,
+  "lat": 45.824971,
+  "demEle": 2175,
+  "prom": 1265,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.0161,46.3801",
+  "name": "Pt. 2147",
+  "lon": 7.016144,
+  "lat": 46.380096,
+  "demEle": 2147,
+  "prom": 710,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.8051,47.2457",
+  "name": "Pt. 2147",
+  "lon": 10.805054,
+  "lat": 47.245678,
+  "demEle": 2147,
+  "prom": 1018,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:11.1786,45.7943",
+  "name": "Pt. 2145",
+  "lon": 11.178589,
+  "lat": 45.79434,
+  "demEle": 2145,
+  "prom": 1924,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.3224,46.6381",
+  "name": "Pt. 2134",
+  "lon": 7.322388,
+  "lat": 46.638122,
+  "demEle": 2134,
+  "prom": 623,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.6952,45.9397",
+  "name": "Pt. 2133",
+  "lon": 10.69519,
+  "lat": 45.939691,
+  "demEle": 2133,
+  "prom": 1190,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:11.1237,45.7254",
+  "name": "Pt. 2133",
+  "lon": 11.123657,
+  "lat": 45.725356,
+  "demEle": 2133,
+  "prom": 881,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.8490,45.7330",
+  "name": "Pt. 2130",
+  "lon": 10.848999,
+  "lat": 45.733025,
+  "demEle": 2130,
+  "prom": 1687,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.7172,47.4244",
+  "name": "Pt. 2116",
+  "lon": 10.717163,
+  "lat": 47.424371,
+  "demEle": 2116,
+  "prom": 667,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.6293,47.4986",
+  "name": "Pt. 2100",
+  "lon": 10.629272,
+  "lat": 47.498648,
+  "demEle": 2100,
+  "prom": 868,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:8.6504,46.1199",
+  "name": "Pt. 2092",
+  "lon": 8.65036,
+  "lat": 46.119893,
+  "demEle": 2092,
+  "prom": 1105,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:11.1896,46.3583",
+  "name": "Pt. 2081",
+  "lon": 11.189575,
+  "lat": 46.358302,
+  "demEle": 2081,
+  "prom": 715,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.2194,46.5749",
+  "name": "Pt. 2079",
+  "lon": 7.219391,
+  "lat": 46.574911,
+  "demEle": 2079,
+  "prom": 654,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:5.5206,44.8753",
+  "name": "Pt. 2065",
+  "lon": 5.52063,
+  "lat": 44.875336,
+  "demEle": 2065,
+  "prom": 780,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.5314,44.0679",
+  "name": "Pt. 2059",
+  "lon": 6.531372,
+  "lat": 44.067854,
+  "demEle": 2059,
+  "prom": 728,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.6083,46.1912",
+  "name": "Pt. 2056",
+  "lon": 6.608276,
+  "lat": 46.19124,
+  "demEle": 2056,
+  "prom": 779,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:11.0358,46.1456",
+  "name": "Pt. 2053",
+  "lon": 11.035767,
+  "lat": 46.145589,
+  "demEle": 2053,
+  "prom": 925,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.2128,44.2963",
+  "name": "Pt. 2053",
+  "lon": 6.212769,
+  "lat": 44.296333,
+  "demEle": 2053,
+  "prom": 695,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.3116,44.2413",
+  "name": "Pt. 2046",
+  "lon": 6.311646,
+  "lat": 44.241264,
+  "demEle": 2046,
+  "prom": 742,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.9596,46.8339",
+  "name": "Pt. 2022",
+  "lon": 7.959595,
+  "lat": 46.833892,
+  "demEle": 2022,
+  "prom": 675,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.4095,44.2491",
+  "name": "Pt. 2017",
+  "lon": 10.409546,
+  "lat": 44.249134,
+  "demEle": 2017,
+  "prom": 1560,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.9149,47.5209",
+  "name": "Pt. 2002",
+  "lon": 10.914917,
+  "lat": 47.52091,
+  "demEle": 2002,
+  "prom": 828,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:5.9601,44.5083",
+  "name": "Pt. 1995",
+  "lon": 5.960083,
+  "lat": 44.508259,
+  "demEle": 1995,
+  "prom": 999,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.2677,45.6947",
+  "name": "Pt. 1989",
+  "lon": 6.2677,
+  "lat": 45.69467,
+  "demEle": 1989,
+  "prom": 1441,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:11.1786,45.9702",
+  "name": "Pt. 1985",
+  "lon": 11.178589,
+  "lat": 45.970243,
+  "demEle": 1985,
+  "prom": 639,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.6952,44.1940",
+  "name": "Pt. 1985",
+  "lon": 10.69519,
+  "lat": 44.194021,
+  "demEle": 1985,
+  "prom": 628,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:8.1532,45.7359",
+  "name": "Pt. 1979",
+  "lon": 8.153229,
+  "lat": 45.735901,
+  "demEle": 1979,
+  "prom": 547,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:11.2225,47.3946",
+  "name": "Pt. 1977",
+  "lon": 11.222534,
+  "lat": 47.394631,
+  "demEle": 1977,
+  "prom": 737,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.8380,47.5506",
+  "name": "Pt. 1971",
+  "lon": 10.838013,
+  "lat": 47.550579,
+  "demEle": 1971,
+  "prom": 704,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.3226,46.0008",
+  "name": "Pt. 1939",
+  "lon": 6.322632,
+  "lat": 46.000778,
+  "demEle": 1939,
+  "prom": 907,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.9589,45.9244",
+  "name": "Pt. 1931",
+  "lon": 10.958862,
+  "lat": 45.924409,
+  "demEle": 1931,
+  "prom": 1302,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.6403,45.8020",
+  "name": "Pt. 1931",
+  "lon": 10.640259,
+  "lat": 45.801999,
+  "demEle": 1931,
+  "prom": 877,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:11.1896,47.5432",
+  "name": "Pt. 1922",
+  "lon": 11.189575,
+  "lat": 47.543164,
+  "demEle": 1922,
+  "prom": 889,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.1678,45.7560",
+  "name": "Pt. 1914",
+  "lon": 10.167847,
+  "lat": 45.756026,
+  "demEle": 1914,
+  "prom": 662,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:9.7833,45.8632",
+  "name": "Pt. 1911",
+  "lon": 9.783325,
+  "lat": 45.863238,
+  "demEle": 1911,
+  "prom": 665,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:5.7843,45.2865",
+  "name": "Pt. 1910",
+  "lon": 5.784302,
+  "lat": 45.286482,
+  "demEle": 1910,
+  "prom": 1578,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.3446,45.7177",
+  "name": "Pt. 1829",
+  "lon": 6.344604,
+  "lat": 45.717686,
+  "demEle": 1829,
+  "prom": 846,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.2338,44.1073",
+  "name": "Pt. 1824",
+  "lon": 10.233765,
+  "lat": 44.10731,
+  "demEle": 1824,
+  "prom": 1056,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:8.8824,46.1075",
+  "name": "Pt. 1818",
+  "lon": 8.882446,
+  "lat": 46.107517,
+  "demEle": 1818,
+  "prom": 1238,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.1139,45.6486",
+  "name": "Pt. 1813",
+  "lon": 6.113892,
+  "lat": 45.648608,
+  "demEle": 1813,
+  "prom": 859,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.6412,43.8939",
+  "name": "Pt. 1803",
+  "lon": 6.641235,
+  "lat": 43.893934,
+  "demEle": 1803,
+  "prom": 654,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.3556,43.8385",
+  "name": "Pt. 1789",
+  "lon": 6.355591,
+  "lat": 43.838489,
+  "demEle": 1789,
+  "prom": 781,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:5.2899,44.1704",
+  "name": "Pt. 1787",
+  "lon": 5.289917,
+  "lat": 44.170385,
+  "demEle": 1787,
+  "prom": 994,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.4545,46.1075",
+  "name": "Pt. 1783",
+  "lon": 6.454468,
+  "lat": 46.107517,
+  "demEle": 1783,
+  "prom": 1144,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:5.7953,44.1231",
+  "name": "Pt. 1776",
+  "lon": 5.795288,
+  "lat": 44.123085,
+  "demEle": 1776,
+  "prom": 844,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.3217,44.0363",
+  "name": "Pt. 1745",
+  "lon": 10.321655,
+  "lat": 44.03627,
+  "demEle": 1745,
+  "prom": 774,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:5.7184,44.9065",
+  "name": "Pt. 1742",
+  "lon": 5.718384,
+  "lat": 44.906469,
+  "demEle": 1742,
+  "prom": 791,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:9.5087,44.5631",
+  "name": "Pt. 1704",
+  "lon": 9.508667,
+  "lat": 44.563077,
+  "demEle": 1704,
+  "prom": 913,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:5.9491,46.2748",
+  "name": "Pt. 1682",
+  "lon": 5.949097,
+  "lat": 46.274834,
+  "demEle": 1682,
+  "prom": 1128,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.2128,44.5083",
+  "name": "Pt. 1681",
+  "lon": 6.212769,
+  "lat": 44.508259,
+  "demEle": 1681,
+  "prom": 785,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:9.2010,44.6882",
+  "name": "Pt. 1663",
+  "lon": 9.20105,
+  "lat": 44.688183,
+  "demEle": 1663,
+  "prom": 765,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:6.1029,45.7943",
+  "name": "Pt. 1653",
+  "lon": 6.102905,
+  "lat": 45.79434,
+  "demEle": 1653,
+  "prom": 728,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:11.1896,46.0313",
+  "name": "Pt. 1649",
+  "lon": 11.189575,
+  "lat": 46.031296,
+  "demEle": 1649,
+  "prom": 950,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:8.4869,47.0514",
+  "name": "Pt. 1645",
+  "lon": 8.486938,
+  "lat": 47.051411,
+  "demEle": 1645,
+  "prom": 1117,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.9259,46.0313",
+  "name": "Pt. 1619",
+  "lon": 10.925903,
+  "lat": 46.031296,
+  "demEle": 1619,
+  "prom": 735,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:5.7404,45.0153",
+  "name": "Pt. 1606",
+  "lon": 5.740356,
+  "lat": 45.015302,
+  "demEle": 1606,
+  "prom": 630,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:9.7174,44.3828",
+  "name": "Pt. 1562",
+  "lon": 9.717407,
+  "lat": 44.382766,
+  "demEle": 1562,
+  "prom": 630,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.8270,45.9550",
+  "name": "Pt. 1560",
+  "lon": 10.827026,
+  "lat": 45.954969,
+  "demEle": 1560,
+  "prom": 621,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:9.1681,46.0084",
+  "name": "Pt. 1558",
+  "lon": 9.168091,
+  "lat": 46.008409,
+  "demEle": 1558,
+  "prom": 1133,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:9.0143,45.9244",
+  "name": "Pt. 1545",
+  "lon": 9.014282,
+  "lat": 45.924409,
+  "demEle": 1545,
+  "prom": 786,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:9.2120,45.9168",
+  "name": "Pt. 1531",
+  "lon": 9.212036,
+  "lat": 45.916766,
+  "demEle": 1531,
+  "prom": 1214,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:9.9371,45.8403",
+  "name": "Pt. 1526",
+  "lon": 9.937134,
+  "lat": 45.840281,
+  "demEle": 1526,
+  "prom": 891,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:8.5638,47.0813",
+  "name": "Pt. 1522",
+  "lon": 8.563843,
+  "lat": 47.081345,
+  "demEle": 1522,
+  "prom": 732,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:5.7623,45.9015",
+  "name": "Pt. 1485",
+  "lon": 5.762329,
+  "lat": 45.901477,
+  "demEle": 1485,
+  "prom": 699,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:5.8173,45.6486",
+  "name": "Pt. 1474",
+  "lon": 5.817261,
+  "lat": 45.648608,
+  "demEle": 1474,
+  "prom": 741,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:8.0035,47.8758",
+  "name": "Pt. 1469",
+  "lon": 8.00354,
+  "lat": 47.875829,
+  "demEle": 1469,
+  "prom": 888,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:5.2130,44.6100",
+  "name": "Pt. 1460",
+  "lon": 5.213013,
+  "lat": 44.610023,
+  "demEle": 1460,
+  "prom": 637,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.0917,43.9098",
+  "name": "Pt. 1450",
+  "lon": 7.091675,
+  "lat": 43.909766,
+  "demEle": 1450,
+  "prom": 648,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:9.6185,45.8479",
+  "name": "Pt. 1449",
+  "lon": 9.61853,
+  "lat": 45.847934,
+  "demEle": 1449,
+  "prom": 659,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:8.4526,45.8814",
+  "name": "Pt. 1444",
+  "lon": 8.452606,
+  "lat": 45.881405,
+  "demEle": 1444,
+  "prom": 1074,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:5.8063,45.5102",
+  "name": "Pt. 1444",
+  "lon": 5.806274,
+  "lat": 45.510197,
+  "demEle": 1444,
+  "prom": 618,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:4.3121,44.7896",
+  "name": "Pt. 1402",
+  "lon": 4.312134,
+  "lat": 44.789633,
+  "demEle": 1402,
+  "prom": 1091,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.0038,48.0230",
+  "name": "Pt. 1336",
+  "lon": 7.003784,
+  "lat": 48.022998,
+  "demEle": 1336,
+  "prom": 973,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:9.3219,45.8632",
+  "name": "Pt. 1276",
+  "lon": 9.321899,
+  "lat": 45.863238,
+  "demEle": 1276,
+  "prom": 652,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:9.9701,45.7637",
+  "name": "Pt. 1269",
+  "lon": 9.970093,
+  "lat": 45.763691,
+  "demEle": 1269,
+  "prom": 827,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:7.3334,44.6804",
+  "name": "Pt. 1260",
+  "lon": 7.333374,
+  "lat": 44.680372,
+  "demEle": 1260,
+  "prom": 625,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:8.5529,44.4377",
+  "name": "Pt. 1232",
+  "lon": 8.552856,
+  "lat": 44.437702,
+  "demEle": 1232,
+  "prom": 673,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:8.6847,45.9244",
+  "name": "Pt. 1156",
+  "lon": 8.684692,
+  "lat": 45.924409,
+  "demEle": 1156,
+  "prom": 818,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:5.4657,43.8147",
+  "name": "Pt. 1103",
+  "lon": 5.465698,
+  "lat": 43.814711,
+  "demEle": 1103,
+  "prom": 611,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:8.7396,45.8709",
+  "name": "Pt. 1095",
+  "lon": 8.739624,
+  "lat": 45.870888,
+  "demEle": 1095,
+  "prom": 681,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:8.3990,46.9990",
+  "name": "Pt. 1048",
+  "lon": 8.399048,
+  "lat": 46.998988,
+  "demEle": 1048,
+  "prom": 601,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:5.8612,45.9168",
+  "name": "Pt. 1019",
+  "lon": 5.861206,
+  "lat": 45.916766,
+  "demEle": 1019,
+  "prom": 621,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:8.6449,45.9120",
+  "name": "Pt. 1002",
+  "lon": 8.644867,
+  "lat": 45.911989,
+  "demEle": 1002,
+  "prom": 787,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:10.5524,43.7513",
+  "name": "Pt. 879",
+  "lon": 10.552368,
+  "lat": 43.751257,
+  "demEle": 879,
+  "prom": 856,
+  "src": "DEM"
+ },
+ {
+  "id": "dem:8.4526,45.9464",
+  "name": "Pt. 747",
+  "lon": 8.452606,
+  "lat": 45.946375,
+  "demEle": 747,
+  "prom": 544,
+  "src": "DEM"
+ }
+]

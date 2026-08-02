@@ -141,4 +141,29 @@ export class HeightField {
   groundAt(lon: number, lat: number): number {
     return this.height(lon, lat, 0);
   }
+
+  /**
+   * Highest DEM sample within `radius` metres. Catalogue coordinates land
+   * anywhere from the true summit to a few hundred metres down the ridge, and
+   * a 30 m grid rounds the top off anyway; taking the local maximum puts a
+   * label on the summit the renderer draws instead of on its flank.
+   */
+  summitNear(lon: number, lat: number, radius = 120): number {
+    const l = this.levels.find((lv) => !Number.isNaN(this.heightIn(lv, lon, lat)));
+    if (!l) return 0;
+    const { u, v } = this.project(l, lon, lat);
+    const n = Math.max(1, Math.round(radius / l.res));
+    let best = -Infinity;
+    for (let dy = -n; dy <= n; dy++) {
+      const y = Math.round(v - 0.5) + dy;
+      if (y < 0 || y >= l.h) continue;
+      for (let dx = -n; dx <= n; dx++) {
+        const x = Math.round(u - 0.5) + dx;
+        if (x < 0 || x >= l.w) continue;
+        const h = l.raw[y * l.w + x] * l.quant + l.bias;
+        if (h > best) best = h;
+      }
+    }
+    return best === -Infinity ? this.height(lon, lat) : best;
+  }
 }
