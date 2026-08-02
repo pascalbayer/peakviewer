@@ -50,6 +50,11 @@ export class Scene {
     this.syncObserver();
   }
 
+  /** Re-uploads any clipmap level whose contents changed since the last frame. */
+  refreshHeights() {
+    if (this.heightField) this.terrain.upload(this.heightField);
+  }
+
   /**
    * Moves the observer. Altitude always comes from the DEM plus an eye height —
    * never from a GPS vertical fix, which is routinely tens of metres out and

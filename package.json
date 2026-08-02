@@ -5,8 +5,11 @@
   "scripts": {
     "gen:region": "node tools/gen_region.mjs data/gornergrat.json src/data/generated-gornergrat.ts",
     "typecheck": "tsc --noEmit",
-    "build:preview": "node tools/build_preview.mjs",
-    "preview": "npm run gen:region && node tools/build_preview.mjs"
+    "build": "npm run gen:region && node tools/build_app.mjs",
+    "build:app": "node tools/build_app.mjs",
+    "build:previews": "npm run gen:region && for s in step1 step2 step3 step4 step5 step6; do node tools/build_preview.mjs $s; done",
+    "preview": "node tools/build_preview.mjs",
+    "serve": "node -e \"require(\\\"http\\\").createServer((q,s)=>{const f=require(\\\"path\\\").join(\\\"dist/app\\\",q.url===\\\"/\\\"?\\\"index.html\\\":q.url);require(\\\"fs\\\").readFile(f,(e,d)=>{if(e){s.writeHead(404);return s.end()}s.writeHead(200,{\\\"content-type\\\":{html:\\\"text/html\\\",js:\\\"text/javascript\\\",css:\\\"text/css\\\",png:\\\"image/png\\\",webmanifest:\\\"application/manifest+json\\\"}[f.split(\\\".\\\").pop()]||\\\"application/octet-stream\\\"});s.end(d)})}).listen(8080,()=>console.log(\\\"http://localhost:8080\\\"))\""
   },
   "repository": {
     "type": "git",

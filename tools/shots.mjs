@@ -34,10 +34,12 @@ for (const s of spec) {
   if (s.js) await page.evaluate(s.js);
   await page.waitForTimeout(s.wait ?? 700);
   const clip = s.full ? undefined : await page.evaluate(() => {
-    const r = document.getElementById('stage').getBoundingClientRect();
+    const node = document.getElementById('stage') || document.querySelector('.stage');
+    if (!node) return null;
+    const r = node.getBoundingClientRect();
     return { x: r.x, y: r.y, width: r.width, height: r.height };
   });
-  await page.screenshot({ path: join(outDir, `${s.name}.png`), clip });
+  await page.screenshot({ path: join(outDir, `${s.name}.png`), ...(clip ? { clip } : {}) });
   if (s.report) console.error(`${s.name}: ${await page.evaluate(s.report)}`);
 }
 

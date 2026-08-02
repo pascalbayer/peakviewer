@@ -104,9 +104,23 @@ canvas.labels {
   pointer-events: none;
 }
 
-.card {
+canvas.planview {
   position: absolute;
   z-index: 3;
+  right: 10px; bottom: 10px;
+  width: 168px; height: 168px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  cursor: crosshair;
+  background: rgba(6, 10, 16, .55);
+}
+@media (max-width: 520px) {
+  canvas.planview { width: 122px; height: 122px; }
+}
+
+.card {
+  position: absolute;
+  z-index: 4;
   left: 10px; right: 10px; bottom: 10px;
   max-width: 340px;
   padding: 12px 14px;

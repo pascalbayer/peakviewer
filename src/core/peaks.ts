@@ -30,9 +30,17 @@ export interface Peak {
   tags?: Record<string, string>;
 }
 
-/** Ranking score used to decide which labels get the scarce screen space. */
+/**
+ * Ranking score used to decide which labels get the scarce screen space.
+ *
+ * A catalogued name is worth a great deal: a 4000 m summit people have heard of
+ * beats an anonymous high point every time, even a taller one. Points derived
+ * from the elevation model alone carry no name worth reading, so they are
+ * ranked well below anything the catalogue knows about.
+ */
 export function peakImportance(p: Peak): number {
-  const ele = p.ele ?? 0;
+  const ele = p.ele ?? p.demEle ?? 0;
   const prom = p.prom ?? 0;
-  return ele * 0.35 + prom * 1.6 + (p.name ? 400 : 0);
+  const named = p.src !== 'DEM' && !/^Pt\.?\s/i.test(p.name);
+  return ele * 0.35 + prom * 1.6 + (named ? 2600 : 0);
 }

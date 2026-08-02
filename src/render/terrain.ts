@@ -219,6 +219,7 @@ export class TerrainPass {
   private texW = 0;
   private texH = 0;
 
+  private uploaded: number[] = [];
   private lvlA = new Float32Array(MAX_LEVELS * 4);
   private lvlB = new Float32Array(MAX_LEVELS * 4);
 
@@ -269,12 +270,17 @@ export class TerrainPass {
       gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       this.texW = w; this.texH = h; this.layers = levels.length;
+      this.uploaded = levels.map(() => -1);
     }
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.tex);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 2);
     levels.forEach((l, i) => {
+      // Streaming refills one level at a time; re-sending all six on every
+      // tile that lands would dominate the frame.
+      if (this.uploaded[i] === l.version) return;
       gl.texSubImage3D(gl.TEXTURE_2D_ARRAY, 0, 0, 0, i, w, h, 1,
         gl.RED_INTEGER, gl.UNSIGNED_SHORT, l.raw);
+      this.uploaded[i] = l.version;
     });
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
     this.syncLevelUniforms(hf);

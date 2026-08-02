@@ -41,7 +41,12 @@ const result = await build({
 });
 
 const js = result.outputFiles[0].text.replace(/<\/script/gi, '<\\/script');
-const css = readFileSync(join(root, 'src', 'preview', 'preview.css'), 'utf8');
+// step6 is the shipping app, so it carries the app's stylesheet, not the
+// preview harness one.
+const cssFile = step === 'step6'
+  ? join(root, 'src', 'app', 'app.css')
+  : join(root, 'src', 'preview', 'preview.css');
+const css = readFileSync(cssFile, 'utf8');
 const title = TITLES[step] ?? `Peak Finder — ${step}`;
 
 const html = `<title>${title}</title>
