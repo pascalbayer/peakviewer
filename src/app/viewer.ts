@@ -13,11 +13,13 @@ import {
 } from '../core/labels';
 import { Peak } from '../core/peaks';
 import { LabelPainter, ON_WHITE } from '../ui/labelPainter';
-import { GpuRenderer, Quality } from '../render/gpu/renderer';
+import { Backend, GpuRenderer, Quality } from '../render/gpu/renderer';
 
 export interface ViewerOptions {
   canvas: HTMLCanvasElement;
   overlay: HTMLCanvasElement;
+  /** Graphics API. WebGL2 is the debugging path; WebGPU is the target. */
+  backend?: Backend;
 }
 
 export class PeakViewer {
@@ -46,7 +48,7 @@ export class PeakViewer {
   }
 
   static async create(opt: ViewerOptions, quality?: Quality): Promise<PeakViewer> {
-    const renderer = await GpuRenderer.create(opt.canvas, quality);
+    const renderer = await GpuRenderer.create(opt.canvas, quality, opt.backend);
     return new PeakViewer(renderer, opt.overlay);
   }
 

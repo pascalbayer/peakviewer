@@ -5,8 +5,19 @@ the skyline computed from an on-device elevation model drawn over it as black
 outlines. Drag to line the outline up with the real ridge; the shutter saves the
 composite to your photos.
 
-Rendered with **Babylon.js on WebGPU**, core modules only. There is no WebGL
-fallback — Chrome or Edge 121+, or Safari 26+ on iOS 26+.
+Rendered with **Babylon.js**, core modules only, through either WebGPU or
+WebGL2 — the same scene, the same uniforms, the same geometry, two shader
+dialects.
+
+> **Currently defaulting to WebGL2** while the rendering is being debugged,
+> because it is the path whose output has actually been verified against
+> read-back pixels. Add `?backend=webgpu` to the address to force the other, or
+> `?backend=webgl2` to come back. The Check panel says which is live, and the
+> choice sticks for the session. `DEFAULT_BACKEND` in `src/app/app.ts` is the
+> one line that flips it.
+
+WebGPU needs Chrome or Edge 121+, or Safari 26+ on iOS 26+. WebGL2 runs
+essentially everywhere.
 
     npm install
     npm run build     # runs the checks, then -> dist/app/ (the PWA, ~1.4 MB)
@@ -35,7 +46,7 @@ IndexedDB, so looking around warms the cache offline mode later relies on. Zoom
 above z11 buys nothing: the source is ~30 m data, and z13 reproduces the
 Matterhorn's summit within 3 m of what z11 gives.
 
-**Rendering.** Two WGSL passes through Babylon. The terrain pass draws a polar
+**Rendering.** Two passes through Babylon. The terrain pass draws a polar
 mesh into an offscreen buffer holding only the distance to each fragment; the
 composite pass runs an edge detector over it and lays the black outline over the
 camera image. The mesh is polar: rays fan out at a fixed angular step and march
@@ -43,8 +54,9 @@ outwards with a step that grows to match, in three segments — geometric near (
 the ground at your feet is not one enormous triangle), one DEM post per step
 through the middle, geometric again far out. It is split into 32 azimuth sectors
 and only the wedge in front of the camera is submitted. Depth is logarithmic,
-mapped to WebGPU's [0,1] clip range, because one 24-bit buffer has to separate a
-boulder 3 m away from a ridge 270 km away.
+because one 24-bit buffer has to separate a boulder 3 m away from a ridge 270 km
+away — mapped to [0,1] on WebGPU and [-1,1] on WebGL2, which along with the
+shader dialect is the whole of the difference between the two backends.
 
 Every texture is rgba8unorm on purpose. Float and integer formats carry
 filterability and bind-group conditions that vary by device; heights are packed
@@ -109,7 +121,7 @@ Photos app. Where sharing files is unsupported it downloads instead.
 ## Layout
 
     src/core/       geodesy, clipmap heightfield, camera, labels, pose, horizon
-    src/render/gpu/ WGSL sources and the Babylon WebGPU renderer
+    src/render/gpu/ WGSL and GLSL sources, and the Babylon renderer
     src/sources/    terrarium tiles, IndexedDB store, clipmap streamer, Overpass
     src/app/        the app — viewer, camera feed, capture, shell
     src/preview/    the published preview build
@@ -244,7 +256,11 @@ reasonably look, not only in a repository. The app therefore carries a
   data is ~30 m. The label card shows the deficit rather than hiding it.
 - **Coverage** is 80°N to 80°S, wherever the tile source has data.
 - A cold start at a new position fetches ~64 tiles (~6 MB) for a 150 km radius.
-- **No WebGL fallback.** On a browser without WebGPU the app says so and stops.
+- **Two backends, one verified.** WebGL2 is what the checks exercise and what
+  the screenshots above came from. The WebGPU path shares all of its geometry
+  and uniforms and its shaders are checked statically, but no picture from it
+  has been looked at — no container here keeps a software WebGPU device alive
+  long enough to render a frame.
 - **GPS altitude** is used as asked, and it is noisy. If the horizon sits high or
   low by a consistent amount, that is usually the altitude, not the compass —
   the Check panel shows the GPS value and the elevation model's side by side.

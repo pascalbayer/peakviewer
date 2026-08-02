@@ -14,7 +14,7 @@
  * device that drew them, so they cannot lie about it.
  */
 
-import { GpuRenderer, Quality } from '../src/render/gpu/renderer';
+import { Backend, GpuRenderer, Quality } from '../src/render/gpu/renderer';
 import { HeightField } from '../src/core/heightfield';
 
 /** Small enough that a software adapter survives it. */
@@ -23,13 +23,26 @@ const PROBE_QUALITY: Quality = { azimuths: 256, rows: 96, sectors: 8 };
 const LON = 7.7845;
 const LAT = 45.9835;
 const GROUND = 1500;
-const WALL = 4000;
+const WALL = 2200;
 const EYE = GROUND + 10;
 
 /**
- * One clipmap level holding a wall of rock due north and flat ground
- * everywhere else. A horizon that is a step function makes the assertions
- * unambiguous: sky above, terrain below, one edge between them.
+ * Where the top of the ridge should land, as a fraction of image height from
+ * the top. The level is ~26.6 m per post at this latitude, so the near face of
+ * the band sits 80 posts ≈ 2.13 km out and 690 m above the eye — 18.0° up. The
+ * frame spans pitch ± fov/2, so 6 ± 25 gives −19°..31°, and 18° falls at
+ * (31 − 18) / 50 of the way down.
+ *
+ * The point of pinning it is orientation. A renderer that samples the range
+ * buffer upside down still produces a plausible-looking outline, just mirrored,
+ * and against a uniform white background nothing else would give it away.
+ */
+const EXPECT_SKYLINE = 0.26;
+
+/**
+ * One clipmap level holding a ridge due north and flat ground everywhere else.
+ * A horizon that is a step function makes the assertions unambiguous: sky
+ * above, terrain below, one edge between them.
  */
 function syntheticField(): HeightField {
   const hf = new HeightField(LON, LAT);
@@ -43,9 +56,11 @@ function syntheticField(): HeightField {
   const raw = new Uint16Array(w * h);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
-      // Mercator y grows southward, so rows above centre are north of us.
+      // Mercator y grows southward, so rows above centre are north of us. The
+      // band has to stay inside the level's usable radius (~126 posts) and far
+      // enough out that it does not fill the whole frame.
       const north = h / 2 - y;
-      raw[y * w + x] = north > 20 && north < 60 ? WALL : GROUND;
+      raw[y * w + x] = north > 80 && north < 110 ? WALL : GROUND;
     }
   }
   hf.addLevel({
@@ -67,11 +82,14 @@ export interface ProbeResult {
   terrain: number;
   /** Row of the topmost outline pixel, as a fraction of image height. */
   edgeRow: number;
+  /** The composite, as a PNG data URL, so a human can look at it. */
+  image: string | null;
 }
 
-export async function runProbe(canvas: HTMLCanvasElement): Promise<ProbeResult> {
+export async function runProbe(canvas: HTMLCanvasElement,
+  backend: Backend = 'webgpu'): Promise<ProbeResult> {
   const notes: string[] = [];
-  const renderer = await GpuRenderer.create(canvas, PROBE_QUALITY);
+  const renderer = await GpuRenderer.create(canvas, PROBE_QUALITY, backend);
   renderer.setHeightField(syntheticField());
   renderer.moveTo(LON, LAT, EYE);
   renderer.camera.set({ yaw: 0, pitch: 6, fov: 50 });
@@ -125,6 +143,7 @@ export async function runProbe(canvas: HTMLCanvasElement): Promise<ProbeResult> 
   let white = 0;
   let ink = 0;
   let edgeRow = 1;
+  let image: string | null = null;
   if (!shot) {
     notes.push('capture returned nothing');
   } else {
@@ -145,10 +164,34 @@ export async function runProbe(canvas: HTMLCanvasElement): Promise<ProbeResult> 
     if (white < 0.4) notes.push(`only ${(white * 100).toFixed(1)}% of the image is white — the composite pass is not painting the background`);
     if (ink < 0.0005) notes.push('no outline pixels — the edge detector found no skyline');
     if (ink > 0.5) notes.push(`${(ink * 100).toFixed(1)}% of the image is dark — the outline has flooded the frame`);
+    if (ink > 0.0005 && Math.abs(edgeRow - EXPECT_SKYLINE) > 0.12) {
+      notes.push(`the skyline is at ${(edgeRow * 100).toFixed(0)}% of image height, `
+        + `expected ${(EXPECT_SKYLINE * 100).toFixed(0)}% — `
+        + `${edgeRow > 0.5 ? 'that is roughly the mirror image, so something is sampled upside down' : 'the geometry is off'}`);
+    }
+    image = toPng(shot);
   }
 
   renderer.dispose();
-  return { ok: notes.length === 0, notes, diagnostics: JSON.parse(JSON.stringify(d)), white, ink, terrain, edgeRow };
+  return {
+    ok: notes.length === 0, notes, diagnostics: JSON.parse(JSON.stringify(d)),
+    white, ink, terrain, edgeRow, image,
+  };
+}
+
+/** The captured frame as a data URL, so a failure can be looked at. */
+function toPng(shot: { width: number; height: number; pixels: Uint8Array }): string | null {
+  try {
+    const cv = document.createElement('canvas');
+    cv.width = shot.width;
+    cv.height = shot.height;
+    const ctx = cv.getContext('2d');
+    if (!ctx) return null;
+    ctx.putImageData(new ImageData(new Uint8ClampedArray(shot.pixels), shot.width, shot.height), 0, 0);
+    return cv.toDataURL('image/png');
+  } catch {
+    return null;
+  }
 }
 
 (globalThis as unknown as Record<string, unknown>).runProbe = runProbe;

@@ -25,7 +25,7 @@ import {
   PermissionKind, PermissionReport, PermissionState, inspect, recoveryHint, requestAll,
 } from './permissions';
 import { CompassRose } from '../ui/compass';
-import { QUALITY_HIGH, QUALITY_LOW, webgpuAvailable } from '../render/gpu/renderer';
+import { Backend, QUALITY_HIGH, QUALITY_LOW, webgpuAvailable } from '../render/gpu/renderer';
 import { OTHER_CREDITS, TERRAIN_CREDITS } from '../core/attribution';
 import { el } from '../ui/dom';
 
@@ -457,14 +457,16 @@ export class App {
   // ------------------------------------------------------------------ state
 
   async start() {
-    if (!webgpuAvailable()) {
+    const backend = chooseBackend();
+    if (backend === 'webgpu' && !webgpuAvailable()) {
       throw new Error('WebGPU is not available in this browser.\n\nThis app renders '
-        + 'the terrain with Babylon.js on WebGPU and has no fallback path.\n\n'
-        + 'Chrome or Edge 121+, or Safari 26+ on iOS 26+, will run it.');
+        + 'the terrain with Babylon.js on WebGPU.\n\nChrome or Edge 121+, or Safari '
+        + '26+ on iOS 26+, will run it. Adding ?backend=webgl2 to the address will '
+        + 'draw the same scene through WebGL2 instead.');
     }
     const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     this.viewer = await PeakViewer.create(
-      { canvas: this.canvas, overlay: this.overlay },
+      { canvas: this.canvas, overlay: this.overlay, backend },
       mobile ? QUALITY_LOW : QUALITY_HIGH,
     );
     this.viewer.setHeightField(this.streamer.heightField);
@@ -716,6 +718,7 @@ export class App {
     const s = this.pose.status;
     const f = this.feed.status;
     const rows: [string, string][] = [
+      ['Backend', d ? (d.backend === 'webgl2' ? 'WebGL2 (debug)' : 'WebGPU') : '—'],
       ['WebGPU', webgpuAvailable() ? 'present' : 'missing'],
       ['Engine', d?.engine ?? '—'],
       ['Adapter', d?.adapter ?? '—'],
@@ -917,6 +920,39 @@ export class App {
     c.fillStyle = '#b23c1e';
     c.beginPath(); c.moveTo(w / 2, h - 1); c.lineTo(w / 2 - 5, h - 9); c.lineTo(w / 2 + 5, h - 9);
     c.closePath(); c.fill();
+  }
+}
+
+/**
+ * The backend used when the address says nothing.
+ *
+ * WebGPU is where this is going. WebGL2 is the default *while the rendering is
+ * being debugged*, because it is the path whose output has actually been seen:
+ * the terrain pass, the edge detector, the camera composite and the labels are
+ * all verified against read-back pixels on it, and none of that can be
+ * established on a WebGPU device that will not survive a frame. Switching back
+ * is this one line.
+ */
+const DEFAULT_BACKEND: Backend = 'webgl2';
+
+/**
+ * Which graphics API to draw with. `?backend=webgpu` or `?backend=webgl2`
+ * overrides, and `?gl` is shorthand for the latter.
+ *
+ * Both paths draw the same scene from the same uniforms and the same geometry;
+ * only the shader dialect and the depth clip range differ. The choice is sticky
+ * for the session so a reload mid-debugging does not silently switch back.
+ */
+function chooseBackend(): Backend {
+  const q = new URLSearchParams(location.search);
+  const asked = q.get('backend') ?? (q.has('gl') ? 'webgl2' : null);
+  const pick = (v: string | null): Backend | null =>
+    (v === 'webgl2' || v === 'webgpu' ? v : null);
+  try {
+    if (pick(asked)) sessionStorage.setItem('peakviewer.backend', asked!);
+    return pick(asked) ?? pick(sessionStorage.getItem('peakviewer.backend')) ?? DEFAULT_BACKEND;
+  } catch {
+    return pick(asked) ?? DEFAULT_BACKEND;
   }
 }
 

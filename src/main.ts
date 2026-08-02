@@ -47,7 +47,7 @@ async function boot() {
       },
     };
 
-    msg.textContent = 'starting WebGPU…';
+    msg.textContent = 'starting the renderer…';
     bar.style.width = '40%';
     const app = new App(document.body, sources);
     try {

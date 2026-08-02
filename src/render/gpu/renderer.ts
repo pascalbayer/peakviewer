@@ -16,6 +16,8 @@
 // itself; pulling the full engine module in ahead of them settles the order.
 // Without it the bundle throws "Class extends value undefined" at load.
 import '@babylonjs/core/Engines/engine';
+import { Engine } from '@babylonjs/core/Engines/engine';
+import { AbstractEngine } from '@babylonjs/core/Engines/abstractEngine';
 import { Constants } from '@babylonjs/core/Engines/constants';
 import { Logger } from '@babylonjs/core/Misc/logger';
 import { ShaderStore } from '@babylonjs/core/Engines/shaderStore';
@@ -26,6 +28,15 @@ import '@babylonjs/core/Engines/WebGPU/Extensions/engine.videoTexture';
 import '@babylonjs/core/Engines/WebGPU/Extensions/engine.readTexture';
 import '@babylonjs/core/Engines/WebGPU/Extensions/engine.renderTarget';
 import '@babylonjs/core/Engines/WebGPU/Extensions/engine.renderTargetTexture';
+// The same six for WebGL. They are separate module graphs — importing only the
+// WebGPU set leaves Engine.createDynamicTexture undefined, which does not
+// surface until something asks for a video texture.
+import '@babylonjs/core/Engines/Extensions/engine.rawTexture';
+import '@babylonjs/core/Engines/Extensions/engine.dynamicTexture';
+import '@babylonjs/core/Engines/Extensions/engine.videoTexture';
+import '@babylonjs/core/Engines/Extensions/engine.readTexture';
+import '@babylonjs/core/Engines/Extensions/engine.renderTarget';
+import '@babylonjs/core/Engines/Extensions/engine.renderTargetTexture';
 import { FreeCamera } from '@babylonjs/core/Cameras/freeCamera';
 import { ShaderLanguage } from '@babylonjs/core/Materials/shaderLanguage';
 import { ShaderMaterial } from '@babylonjs/core/Materials/shaderMaterial';
@@ -43,6 +54,9 @@ import { Camera } from '../../core/camera';
 import { DEG, REFRACTION_K, effectiveRadiusAt, localRadius } from '../../core/geodesy';
 import { HeightField, Observer } from '../../core/heightfield';
 import {
+  COMPOSITE_FRAGMENT_GL, COMPOSITE_VERTEX_GL, TERRAIN_FRAGMENT_GL, TERRAIN_VERTEX_GL,
+} from './glsl';
+import {
   COMPOSITE_FRAGMENT, COMPOSITE_UNIFORMS, COMPOSITE_VERTEX, HEIGHT_BIAS,
   TERRAIN_FRAGMENT, TERRAIN_UNIFORMS, TERRAIN_VERTEX,
 } from './wgsl';
@@ -50,6 +64,17 @@ import {
 const MAX_LEVELS = 8;
 const TERRAIN_MASK = 0x1;
 const VIEW_MASK = 0x2;
+
+/**
+ * Which graphics API to draw with.
+ *
+ * WebGPU is the target. WebGL2 exists because it runs everywhere — including
+ * under software rasterisation in CI, where a software WebGPU adapter is too
+ * unstable to render a frame — so the picture can actually be checked. The two
+ * paths share every uniform, both meshes and all the geometry; only the shader
+ * dialect and the depth clip range differ.
+ */
+export type Backend = 'webgpu' | 'webgl2';
 
 export interface Quality {
   /** Rays around the full circle. 2048 gives ~0.18 deg of azimuth. */
@@ -65,6 +90,7 @@ export const QUALITY_LOW: Quality = { azimuths: 1024, rows: 420, sectors: 32 };
 
 export interface RendererDiagnostics {
   webgpu: boolean;
+  backend: Backend;
   engine: string;
   adapter: string;
   /** Anything Babylon logged as an error or warning, verbatim. */
@@ -118,13 +144,13 @@ export class GpuRenderer {
   heightField: HeightField | null = null;
 
   readonly diagnostics: RendererDiagnostics = {
-    webgpu: false, engine: '', adapter: '', shaderErrors: [],
+    webgpu: false, backend: 'webgpu', engine: '', adapter: '', shaderErrors: [],
     terrainReady: false, compositeReady: false, framesDrawn: 0,
     deviceLost: 0, frameErrors: 0, lastError: '',
     levels: 0, atlas: '', vertices: 0, sectorsDrawn: 0, frameMs: 0, size: '',
   };
 
-  private engine!: WebGPUEngine;
+  private engine!: AbstractEngine;
   private scene!: Scene;
   private viewCam!: FreeCamera;
   private terrainCam!: FreeCamera;
@@ -145,22 +171,24 @@ export class GpuRenderer {
   private frameTimes: number[] = [];
   private disposed = false;
 
-  private constructor(readonly canvas: HTMLCanvasElement) {}
+  private constructor(readonly canvas: HTMLCanvasElement, readonly backend: Backend) {}
 
-  static async create(canvas: HTMLCanvasElement, quality?: Quality): Promise<GpuRenderer> {
-    if (!webgpuAvailable()) {
+  static async create(canvas: HTMLCanvasElement, quality?: Quality,
+    backend: Backend = 'webgpu'): Promise<GpuRenderer> {
+    if (backend === 'webgpu' && !webgpuAvailable()) {
       throw new Error('This browser has no WebGPU. The renderer needs it — try '
         + 'Chrome or Edge 121+, or Safari 26+ on iOS 26.');
     }
-    const r = new GpuRenderer(canvas);
+    const r = new GpuRenderer(canvas, backend);
     if (quality) r.quality = quality;
     try {
       await r.init();
     } catch (e) {
+      const why = e instanceof Error ? e.message : String(e);
+      if (backend === 'webgl2') throw new Error(`WebGL2 would not start.\n\n${why}`);
       // A present navigator.gpu is not the same as a usable one: virtual
       // machines, remote desktops and browsers started without GPU access all
       // expose the API and then hand back no adapter. Say which it was.
-      const why = e instanceof Error ? e.message : String(e);
       throw new Error(`WebGPU is present but would not start.\n\n${why}\n\n`
         + 'This usually means the device or browser has no usable GPU adapter — '
         + 'a virtual machine, a remote session, or hardware acceleration turned '
@@ -175,24 +203,52 @@ export class GpuRenderer {
     // Capture everything it says so the Check panel can show the real reason.
     this.captureLogs();
 
-    ShaderStore.ShadersStoreWGSL.terrainVertexShader = TERRAIN_VERTEX;
-    ShaderStore.ShadersStoreWGSL.terrainFragmentShader = TERRAIN_FRAGMENT;
-    ShaderStore.ShadersStoreWGSL.compositeVertexShader = COMPOSITE_VERTEX;
-    ShaderStore.ShadersStoreWGSL.compositeFragmentShader = COMPOSITE_FRAGMENT;
-
-    this.engine = new WebGPUEngine(this.canvas, {
-      antialias: false,          // edges come from the detector, not from MSAA
-      stencil: false,
-      adaptToDeviceRatio: true,
-      powerPreference: 'high-performance',
-    });
-    await this.engine.initAsync();
-
     const d = this.diagnostics;
-    d.webgpu = true;
-    d.engine = `Babylon.js ${this.engine.description ?? 'WebGPU'}`;
-    const adapter = (this.engine as unknown as { _adapterInfo?: Record<string, string> })._adapterInfo;
-    d.adapter = adapter ? `${adapter.vendor ?? '?'} ${adapter.architecture ?? ''} ${adapter.description ?? ''}`.trim() : 'unreported';
+    d.backend = this.backend;
+
+    if (this.backend === 'webgl2') {
+      ShaderStore.ShadersStore.terrainVertexShader = TERRAIN_VERTEX_GL;
+      ShaderStore.ShadersStore.terrainFragmentShader = TERRAIN_FRAGMENT_GL;
+      ShaderStore.ShadersStore.compositeVertexShader = COMPOSITE_VERTEX_GL;
+      ShaderStore.ShadersStore.compositeFragmentShader = COMPOSITE_FRAGMENT_GL;
+
+      const gl = new Engine(this.canvas, false, {
+        antialias: false,
+        stencil: false,
+        preserveDrawingBuffer: false,
+      }, true);
+      if (gl.webGLVersion < 2) {
+        gl.dispose();
+        throw new Error('This browser only offers WebGL1, which cannot run these shaders.');
+      }
+      this.engine = gl;
+      d.webgpu = false;
+      d.engine = `Babylon.js WebGL${gl.webGLVersion}`;
+      d.adapter = gl.getGlInfo().renderer || 'unreported';
+      // WebGL clips depth to [-1,1]; the GLSL remap ends on the same interval.
+      this.camera.depthZeroToOne = false;
+    } else {
+      ShaderStore.ShadersStoreWGSL.terrainVertexShader = TERRAIN_VERTEX;
+      ShaderStore.ShadersStoreWGSL.terrainFragmentShader = TERRAIN_FRAGMENT;
+      ShaderStore.ShadersStoreWGSL.compositeVertexShader = COMPOSITE_VERTEX;
+      ShaderStore.ShadersStoreWGSL.compositeFragmentShader = COMPOSITE_FRAGMENT;
+
+      const wgpu = new WebGPUEngine(this.canvas, {
+        antialias: false,        // edges come from the detector, not from MSAA
+        stencil: false,
+        adaptToDeviceRatio: true,
+        powerPreference: 'high-performance',
+      });
+      await wgpu.initAsync();
+      this.engine = wgpu;
+      d.webgpu = true;
+      d.engine = `Babylon.js ${wgpu.description ?? 'WebGPU'}`;
+      const info = (wgpu as unknown as { _adapterInfo?: Record<string, string> })._adapterInfo;
+      d.adapter = info
+        ? `${info.vendor ?? '?'} ${info.architecture ?? ''} ${info.description ?? ''}`.trim()
+        : 'unreported';
+      this.camera.depthZeroToOne = true;
+    }
 
     this.scene = new Scene(this.engine);
     this.scene.clearColor = new Color4(0, 0, 0, 1);
@@ -260,13 +316,18 @@ export class GpuRenderer {
 
   // ------------------------------------------------------------------ passes
 
+  /** WGSL or GLSL, depending on which engine was created. */
+  private get shaderLanguage(): ShaderLanguage {
+    return this.backend === 'webgl2' ? ShaderLanguage.GLSL : ShaderLanguage.WGSL;
+  }
+
   private buildTerrainMaterial() {
     this.terrainMat = new ShaderMaterial('terrain', this.scene,
       { vertex: 'terrain', fragment: 'terrain' }, {
         attributes: ['position'],
         uniforms: [...TERRAIN_UNIFORMS],
         samplers: ['heights'],
-        shaderLanguage: ShaderLanguage.WGSL,
+        shaderLanguage: this.shaderLanguage,
       });
     this.terrainMat.backFaceCulling = false;
     this.terrainMat.setTexture('heights', this.blank);
@@ -294,7 +355,7 @@ export class GpuRenderer {
         attributes: ['position'],
         uniforms: [...COMPOSITE_UNIFORMS],
         samplers: ['rangeTex', 'videoTex'],
-        shaderLanguage: ShaderLanguage.WGSL,
+        shaderLanguage: this.shaderLanguage,
       });
     this.compositeMat.backFaceCulling = false;
     this.compositeMat.disableDepthWrite = true;
