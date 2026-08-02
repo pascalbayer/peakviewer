@@ -108,10 +108,13 @@ the same `App` class to bundled data. That is the only difference between them.
 
 ## Deploying
 
-`docs/` holds a built copy for GitHub Pages. Enable it once under
+`docs/` on `main` holds a built copy for GitHub Pages. Enable it once under
 **Settings → Pages → Build and deployment → Deploy from a branch**, branch
-`claude/peak-finder-mobile-pwa-ixawqh`, folder `/docs`. The app then lives at
+`main`, folder `/docs`. The app then lives at
 `https://<owner>.github.io/peakviewer/`.
+
+Rebuild and commit `docs/` whenever `src/` changes — it is a checked-in build
+artefact, not something Pages compiles for you.
 
     npm run build:pages     # checks, builds the PWA and the demo into docs/
 
