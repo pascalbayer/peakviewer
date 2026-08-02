@@ -106,6 +106,27 @@ Photos app. Where sharing files is unsupported it downloads instead.
 `src/main.ts` wires the app to the network sources; `src/preview/app.ts` wires
 the same `App` class to bundled data. That is the only difference between them.
 
+## Deploying
+
+`docs/` holds a built copy for GitHub Pages. Enable it once under
+**Settings → Pages → Build and deployment → Deploy from a branch**, branch
+`claude/peak-finder-mobile-pwa-ixawqh`, folder `/docs`. The app then lives at
+`https://<owner>.github.io/peakviewer/`.
+
+    npm run build:pages     # checks, builds the PWA and the demo into docs/
+
+This matters more than convenience. Camera, geolocation and the motion sensors
+are delegated through Permissions-Policy, so a page embedded in someone else's
+iframe only gets them if the embedder passed
+`allow="camera; geolocation; gyroscope; accelerometer; magnetometer"` down. A
+host that does not — most sandboxed preview frames — produces failures that look
+exactly like the user refusing. The **Access** panel reports whether the page is
+framed and what the policy allows, so the two can be told apart.
+
+`docs/index.html` is the live app: it streams tiles and queries OpenStreetMap.
+`docs/demo.html` is the self-contained build with Zermatt baked in — one file,
+no external requests, useful with no signal.
+
 ## Preview
 
 One self-contained HTML file with no external requests, which is why the

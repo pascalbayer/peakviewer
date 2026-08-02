@@ -259,6 +259,9 @@ export class App {
         'This page is not on a secure origin, so the browser will refuse all '
         + 'three whatever you choose here. Open it over https.'));
     }
+    for (const n of p.notes) {
+      this.gate.append(el('p', { class: 'gate-warn' }, n));
+    }
 
     const ask = el('button', {
       class: 'chip on gate-go', type: 'button',
@@ -330,7 +333,11 @@ export class App {
     panel.append(el('div', { class: 'card-rows' },
       ...rows.flatMap(([k, label]) => [el('span', {}, label), el('b', {}, p[k])]),
       el('span', {}, 'Secure origin'), el('b', {}, p.secure ? 'yes' : 'no'),
-      el('span', {}, 'Motion needs a prompt'), el('b', {}, p.motionNeedsRequest ? 'yes (iOS)' : 'no')));
+      el('span', {}, 'Motion needs a prompt'), el('b', {}, p.motionNeedsRequest ? 'yes (iOS)' : 'no'),
+      el('span', {}, 'In a frame'), el('b', {}, p.framed ? 'yes' : 'no'),
+      ...Object.entries(p.policy).flatMap(([k, v]) =>
+        [el('span', {}, `policy: ${k}`), el('b', {}, v)])));
+    for (const n of p.notes) panel.append(el('p', { class: 'muted' }, n));
     for (const [k, label] of rows) {
       if (p[k] === 'denied') {
         panel.append(el('p', { class: 'muted' }, `${label}: ${recoveryHint(k)}`));

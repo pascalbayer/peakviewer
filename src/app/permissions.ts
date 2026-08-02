@@ -29,8 +29,41 @@ export interface PermissionReport {
   secure: boolean;
   /** True where an explicit motion request exists — iOS and iPadOS. */
   motionNeedsRequest: boolean;
+  /** True when the page is inside an iframe. */
+  framed: boolean;
+  /**
+   * What the embedding Permissions-Policy allows, where the browser will say.
+   * A sandboxed iframe that has not been given `allow="camera; geolocation;
+   * gyroscope; accelerometer; magnetometer"` blocks these no matter what the
+   * user agrees to, and the failure looks exactly like a refusal.
+   */
+  policy: Record<string, 'allowed' | 'blocked' | 'unknown'>;
   /** Anything the browser told us on the way. */
   notes: string[];
+}
+
+const POLICY_FEATURES = ['camera', 'geolocation', 'gyroscope', 'accelerometer',
+  'magnetometer', 'xr-spatial-tracking'];
+
+function readPolicy(): Record<string, 'allowed' | 'blocked' | 'unknown'> {
+  const out: Record<string, 'allowed' | 'blocked' | 'unknown'> = {};
+  const fp = (document as unknown as {
+    featurePolicy?: { allowsFeature(f: string): boolean; features(): string[] };
+    permissionsPolicy?: { allowsFeature(f: string): boolean; features(): string[] };
+  });
+  const api = fp.featurePolicy ?? fp.permissionsPolicy;
+  for (const f of POLICY_FEATURES) {
+    if (!api) { out[f] = 'unknown'; continue; }
+    try {
+      const known = api.features?.() ?? [];
+      out[f] = known.length && !known.includes(f)
+        ? 'unknown'
+        : (api.allowsFeature(f) ? 'allowed' : 'blocked');
+    } catch {
+      out[f] = 'unknown';
+    }
+  }
+  return out;
 }
 
 interface RequestPermissionCtor { requestPermission?: () => Promise<string> }
@@ -49,6 +82,10 @@ export function motionNeedsRequest(): boolean {
   return typeof orientationCtor()?.requestPermission === 'function';
 }
 
+export function framed(): boolean {
+  try { return window.top !== window.self; } catch { return true; }
+}
+
 export function isSecure(): boolean {
   return typeof window !== 'undefined' && window.isSecureContext;
 }
@@ -61,8 +98,20 @@ export async function inspect(): Promise<PermissionReport> {
     location: 'unknown',
     secure: isSecure(),
     motionNeedsRequest: motionNeedsRequest(),
+    framed: framed(),
+    policy: readPolicy(),
     notes: [],
   };
+  const blocked = Object.entries(report.policy)
+    .filter(([, v]) => v === 'blocked').map(([k]) => k);
+  if (report.framed && blocked.length) {
+    report.notes.push(`This page is embedded in a frame that blocks `
+      + `${blocked.join(', ')}. The browser will refuse those regardless of what `
+      + `you allow here — open the app at its own address instead.`);
+  } else if (report.framed) {
+    report.notes.push('This page is running inside a frame. Camera, motion and '
+      + 'location depend on the embedding page delegating them.');
+  }
   if (!report.secure) {
     report.notes.push('This page is not on a secure origin. Camera, location and '
       + 'motion sensors are all unavailable over plain http — use https or localhost.');
@@ -110,23 +159,28 @@ export interface RequestResult extends PermissionReport {
  * it is issued before anything is awaited for exactly that reason.
  */
 export async function requestAll(opt: RequestOptions = {}): Promise<RequestResult> {
+  // 1. Motion goes out before this function awaits *anything*, including the
+  // inspection below. Safari's activation is transient, and every await is a
+  // chance to lose it — the request has to leave on the same tick as the tap.
+  const motionPromise = motionNeedsRequest()
+    ? orientationCtor()!.requestPermission!().then(
+      (r) => (r === 'granted' ? 'granted' : 'denied') as PermissionState,
+      (e): PermissionState => { motionError = message(e); return 'denied'; },
+    )
+    : null;
+  let motionError: string | null = null;
+
   const report = await inspect();
   const out: RequestResult = { ...report, stream: null };
 
-  // 1. Motion, first and without awaiting anything else beforehand.
-  if (report.motionNeedsRequest) {
-    try {
-      const r = await orientationCtor()!.requestPermission!();
-      out.motion = r === 'granted' ? 'granted' : 'denied';
-      // The motion event has its own gate on some iOS versions; the answer to
-      // the first prompt is reused, so this rarely shows a second dialog.
-      const m = motionCtor();
-      if (typeof m?.requestPermission === 'function') {
-        try { await m.requestPermission(); } catch { /* orientation is the one that matters */ }
-      }
-    } catch (e) {
-      out.motion = 'denied';
-      out.notes.push(`Motion request failed: ${message(e)}`);
+  if (motionPromise) {
+    out.motion = await motionPromise;
+    if (motionError) out.notes.push(`Motion request failed: ${motionError}`);
+    // The motion event has its own gate on some iOS versions; the answer to
+    // the first prompt is reused, so this rarely shows a second dialog.
+    const m = motionCtor();
+    if (out.motion === 'granted' && typeof m?.requestPermission === 'function') {
+      try { await m.requestPermission(); } catch { /* orientation is the one that matters */ }
     }
   }
   opt.onProgress?.('motion', out.motion);
