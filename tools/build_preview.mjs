@@ -30,7 +30,7 @@ const result = await build({
   format: 'iife',
   target: ['es2020'],
   minify: true,
-  legalComments: 'none',
+  legalComments: 'eof',
   write: false,
   logLevel: 'warning',
 });

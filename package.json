@@ -12,11 +12,11 @@
     "serve": "node -e \"require(\\\"http\\\").createServer((q,s)=>{const f=require(\\\"path\\\").join(\\\"dist/app\\\",q.url===\\\"/\\\"?\\\"index.html\\\":q.url);require(\\\"fs\\\").readFile(f,(e,d)=>{if(e){s.writeHead(404);return s.end()}s.writeHead(200,{\\\"content-type\\\":{html:\\\"text/html\\\",js:\\\"text/javascript\\\",css:\\\"text/css\\\",png:\\\"image/png\\\",webmanifest:\\\"application/manifest+json\\\"}[f.split(\\\".\\\").pop()]||\\\"application/octet-stream\\\"});s.end(d)})}).listen(8080,()=>console.log(\\\"http://localhost:8080\\\"))\"",
     "check:shaders": "node tools/check_wgsl.mjs && node tools/check_math.mjs",
     "check": "tsc --noEmit && npm run check:shaders",
-    "build:pages": "npm run check && npm run gen:region && node tools/build_app.mjs docs && node tools/build_preview.mjs app && node tools/copy_demo.mjs"
+    "build:pages": "npm run check && npm run gen:region && node tools/build_app.mjs docs && node tools/build_preview.mjs app && node tools/copy_demo.mjs && node tools/gen_notices.mjs"
   },
   "repository": {
     "type": "git",
-    "url": "http://local_proxy@127.0.0.1:41729/git/pascalbayer/peakviewer"
+    "url": "git+https://github.com/pascalbayer/peakviewer.git"
   },
   "devDependencies": {
     "esbuild": "^0.28.1",
@@ -29,5 +29,9 @@
   "dependencies": {
     "@babylonjs/core": "^9.19.0",
     "geomagnetism": "^0.2.0"
+  },
+  "homepage": "https://pascalbayer.github.io/peakviewer/",
+  "bugs": {
+    "url": "https://github.com/pascalbayer/peakviewer/issues"
   }
 }

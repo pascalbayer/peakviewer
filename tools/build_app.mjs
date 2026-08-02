@@ -16,7 +16,7 @@ const res = await build({
   target: ['es2020'],
   minify: true,
   sourcemap: false,
-  legalComments: 'none',
+  legalComments: 'eof',
   outfile: join(out, 'app.js'),
   logLevel: 'warning',
   metafile: true,
