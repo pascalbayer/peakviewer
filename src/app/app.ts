@@ -26,6 +26,7 @@ import {
 } from './permissions';
 import { CompassRose } from '../ui/compass';
 import { QUALITY_HIGH, QUALITY_LOW, webgpuAvailable } from '../render/gpu/renderer';
+import { OTHER_CREDITS, TERRAIN_CREDITS } from '../core/attribution';
 import { el } from '../ui/dom';
 
 export interface DownloadProgress { done: number; total: number; bytes: number }
@@ -168,9 +169,24 @@ export class App {
 
   private buildPanels() {
     this.sheet.append(this.tabRow);
-    for (const n of ['Peaks', 'Camera', 'Access', 'Offline', 'Check', 'About']) {
+    for (const n of ['Peaks', 'Camera', 'Access', 'Offline', 'Check', 'About', 'Credits']) {
       this.addPanel(n, el('div', {}));
     }
+
+    // Several of the elevation surveys ask by licence to be named, and the
+    // licences say the notice has to appear somewhere a user would reasonably
+    // look — which is here, not only in a file in the repository.
+    this.panels.Credits.append(
+      el('h4', {}, 'Data'),
+      ...OTHER_CREDITS.map((c) => el('p', {}, c.url
+        ? el('a', { href: c.url, target: '_blank', rel: 'noreferrer noopener' }, c.text)
+        : c.text)),
+      el('h4', {}, 'Elevation surveys'),
+      el('p', {}, 'Terrain tiles are a composite of national and global surveys. '
+        + 'These are the notices their licences require, reproduced in full:'),
+      el('div', { class: 'credits' },
+        ...TERRAIN_CREDITS.map((c) => el('p', {}, c.text))),
+    );
 
     this.panels.About.append(
       el('h4', {}, 'What you are looking at'),
@@ -190,6 +206,8 @@ export class App {
         + 'contributors. Position and altitude come from GPS; the elevation '
         + "model's own ground height is shown next to it, because a phone's "
         + 'vertical fix is the weaker half of a satellite fix.'),
+      el('p', {}, 'Full attribution for every survey the terrain draws on is in '
+        + 'the Credits panel.'),
     );
   }
 

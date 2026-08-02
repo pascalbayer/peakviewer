@@ -290,25 +290,43 @@ Apache License
    END OF TERMS AND CONDITIONS
 ```
 
-## Elevation data
+## Data
 
-Terrain comes from AWS Terrain Tiles (Mapzen "terrarium" encoding), a
-composite of national and global elevation models. Attribution follows the
-underlying source for the area concerned; the bundled demo region covers the
-Swiss Valais, sourced from NASA/USGS SRTM (public domain) via that dataset.
-See https://github.com/tilezen/joerd/blob/master/docs/attribution.md for the
-full per-source list, and reproduce the relevant lines if you bundle data for
-other regions.
+- Summit names and positions © OpenStreetMap contributors, available under the Open Database Licence (ODbL). <https://www.openstreetmap.org/copyright>
+- Elevation tiles served from the AWS Terrain Tiles public dataset, in the Tilezen "terrarium" encoding. <https://registry.opendata.aws/terrain-tiles/>
+- Magnetic declination from the World Magnetic Model 2025. <https://www.ncei.noaa.gov/products/world-magnetic-model>
+- Rendering by Babylon.js, Apache-2.0. <https://www.babylonjs.com>
+
+## Elevation surveys
+
+Terrain tiles are a composite of national and global surveys. These are the
+notices their licences require, reproduced verbatim. They are shown in the
+app's Credits panel as well, because a licence notice buried in a repository
+is not "a place that is reasonable to the medium".
+
+- ArcticDEM terrain data DEM(s) were created from DigitalGlobe, Inc., imagery and funded under National Science Foundation awards 1043681, 1559691, and 1542736.
+- Australia terrain data © Commonwealth of Australia (Geoscience Australia) 2017.
+- Austria terrain data © offene Daten Österreichs – Digitales Geländemodell (DGM) Österreich.
+- Canada terrain data contains information licensed under the Open Government Licence – Canada.
+- Europe terrain data produced using Copernicus data and information funded by the European Union - EU-DEM layers.
+- Global ETOPO1 terrain data U.S. National Oceanic and Atmospheric Administration.
+- Mexico terrain data source: INEGI, Continental relief, 2016.
+- New Zealand terrain data Copyright 2011 Crown copyright (c) Land Information New Zealand and the New Zealand Government (All rights reserved).
+- Norway terrain data © Kartverket.
+- United Kingdom terrain data © Environment Agency copyright and/or database right 2015. All rights reserved.
+- United States 3DEP (formerly NED) and global GMTED2010 and SRTM terrain data courtesy of the U.S. Geological Survey.
+
+Source list: https://github.com/tilezen/joerd/blob/master/docs/attribution.md
+
+The demo region bundled in `data/` covers the Swiss Valais, which that
+dataset sources from NASA/USGS SRTM — public domain, and covered by the USGS
+line above. Bake data for another country and the matching line above becomes
+a live obligation rather than a courtesy.
 
 ## Summit names
 
-At runtime the app queries OpenStreetMap, whose data is © OpenStreetMap
-contributors and licensed under the Open Database Licence (ODbL). The app
-credits them in its About panel. The catalogue bundled with the demo build is
-not OSM-derived: summits are computed from the elevation model and names come
-from data/valais.catalogue.json.
-
-## Magnetic model
-
-Magnetic declination uses the World Magnetic Model 2025, produced by NOAA
-NCEI and the British Geological Survey, via the `geomagnetism` package.
+At runtime the app queries OpenStreetMap; its data is © OpenStreetMap
+contributors under the ODbL, credited in the Credits panel. The catalogue
+bundled with the demo build is *not* OSM-derived: those summits are computed
+from the elevation model by prominence and named from
+data/valais.catalogue.json.

@@ -182,12 +182,22 @@ so the bundles are built with `legalComments: 'eof'` rather than stripping them.
 
 ## Data sources
 
+Terrain tiles are a composite of national and global surveys, several of which
+require attribution by licence — and require it somewhere a user would
+reasonably look, not only in a repository. The app therefore carries a
+**Credits** panel reproducing every notice verbatim, generated from
+`src/core/attribution.ts`, which is also the source for
+`THIRD-PARTY-NOTICES.md`. Changing one changes both.
+
 - Elevation: [AWS Terrain Tiles](https://registry.opendata.aws/terrain-tiles/),
-  Mapzen terrarium encoding. Licensing follows the underlying source (SRTM,
-  NASADEM, 3DEP and others).
-- Summits: OpenStreetMap contributors, ODbL, via Overpass at runtime.
-- Magnetic declination: NOAA/BGS World Magnetic Model 2025, via the
-  `geomagnetism` package.
+  Tilezen terrarium encoding — a composite of ArcticDEM, Geoscience Australia,
+  data.gv.at, the Government of Canada, Copernicus EU-DEM, NOAA ETOPO1, INEGI,
+  Land Information New Zealand, Kartverket, the UK Environment Agency and the
+  U.S. Geological Survey. The bundled Valais demo comes from USGS SRTM.
+- Summits: © OpenStreetMap contributors, ODbL, via Overpass at runtime.
+- Magnetic declination: NOAA NCEI / British Geological Survey World Magnetic
+  Model 2025, via the `geomagnetism` package.
+- Rendering: Babylon.js, Apache-2.0.
 
 ## Known limits
 
