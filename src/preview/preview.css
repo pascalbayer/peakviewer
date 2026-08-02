@@ -40,6 +40,8 @@ body {
 }
 
 #stage canvas.view {
+  position: relative;
+  z-index: 1;
   display: block;
   width: 100%;
   height: 100%;
@@ -49,6 +51,7 @@ body {
 #overlay {
   position: absolute;
   inset: 0;
+  z-index: 2;
   pointer-events: none;
 }
 
@@ -77,6 +80,22 @@ body {
 }
 .badge b { color: var(--txt); font-weight: 600; }
 
+video.feed {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: transparent;
+}
+
+/* Stand-in backdrop when there is no camera, so AR compositing stays
+   reviewable on a desktop. */
+#stage.ar {
+  background: linear-gradient(#5c86b4 0%, #9fbcd6 38%, #c6d2da 52%, #8d9a90 68%, #59614f 100%);
+}
+
 canvas.labels {
   position: absolute;
   inset: 0;
@@ -87,6 +106,7 @@ canvas.labels {
 
 .card {
   position: absolute;
+  z-index: 3;
   left: 10px; right: 10px; bottom: 10px;
   max-width: 340px;
   padding: 12px 14px;

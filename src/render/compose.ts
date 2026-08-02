@@ -41,7 +41,8 @@ uniform vec2  uTan;          // tan(hfov/2), tan(vfov/2)
 uniform float uOutline;      // 0 = shaded only, 1 = outline only
 uniform float uEdgeLow, uEdgeHigh;
 uniform float uEdgeWidth;
-uniform float uSkyAlpha;     // 0 = transparent background (AR), 1 = draw sky
+uniform float uSkyAlpha;     // 0 = transparent background (AR)
+uniform float uFillAlpha;    // 0 = transparent terrain (AR): outline only, 1 = draw sky
 uniform vec3  uLineColor;
 uniform float uHorizonMark;
 
@@ -91,7 +92,10 @@ void main() {
 
   vec3 sky = skyColor(elev);
   vec3 base = hit ? mix(shaded, paper, uOutline) : mix(sky, mix(sky, vec3(1.0), 0.55), uOutline);
-  float alpha = hit ? 1.0 : uSkyAlpha;
+  float alpha = hit ? uFillAlpha : uSkyAlpha;
+  // With nothing filled in, a partially-lit edge pixel must fade the line
+  // itself rather than fade towards a paper colour that is not being drawn.
+  base = mix(base, uLineColor, 1.0 - max(uFillAlpha, uSkyAlpha));
 
   // A faint true-horizontal reference at elevation 0: handy for checking that
   // the curvature and refraction terms are doing what they claim.
@@ -141,6 +145,7 @@ export class ComposePass {
     this.u.v2('uTan', th * cam.aspect, th);
     this.u.f('uOutline', this.style === 'shaded' ? 0 : 1);
     this.u.f('uSkyAlpha', this.style === 'ar' ? 0 : 1);
+    this.u.f('uFillAlpha', this.style === 'ar' ? 0 : 1);
     this.u.f('uEdgeLow', this.edgeLow);
     this.u.f('uEdgeHigh', this.edgeHigh);
     this.u.f('uEdgeWidth', this.edgeWidth);

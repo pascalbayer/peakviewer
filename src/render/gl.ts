@@ -4,7 +4,10 @@ export function createContext(canvas: HTMLCanvasElement): GL {
   const gl = canvas.getContext('webgl2', {
     antialias: false, // we resolve edges ourselves in the silhouette pass
     depth: false,
-    alpha: false,
+    // Alpha is on for AR: in that mode the compose pass leaves the sky
+    // transparent so the camera frame behind the canvas shows through.
+    alpha: true,
+    premultipliedAlpha: false,
     powerPreference: 'high-performance',
     preserveDrawingBuffer: false,
   });

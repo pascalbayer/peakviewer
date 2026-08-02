@@ -18,7 +18,9 @@ mkdirSync(outDir, { recursive: true });
 const browser = await chromium.launch({
   executablePath: process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
   args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader',
-    '--disable-gpu-sandbox', '--no-sandbox'],
+    '--disable-gpu-sandbox', '--no-sandbox',
+    // A synthetic camera so the AR compositing can be checked headlessly.
+    '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'],
 });
 const page = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 1 });
 const logs = [];
